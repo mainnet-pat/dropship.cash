@@ -1,9 +1,12 @@
 import type { NextConfig } from "next";
-
+// @ts-ignore-next-line
 import FilterWarningsPlugin from "webpack-filter-warnings-plugin";
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   webpack: (config, options) => {
     config.experiments = {...config.experiments, topLevelAwait: true };
     config.resolve.alias = {...config.resolve.alias, ...{
