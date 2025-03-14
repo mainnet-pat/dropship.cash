@@ -1,4 +1,4 @@
-import { Transaction } from "@bitauth/libauth";
+import { lockingBytecodeToCashAddress, Transaction } from "@bitauth/libauth";
 import { clsx, type ClassValue } from "clsx"
 import { BCMR, AuthChainElement, hexToBin } from "mainnet-js";
 import { twMerge } from "tailwind-merge"
@@ -236,4 +236,110 @@ export const convertIpfsLink = (uri: string | undefined, preferredGateway?: stri
 
 export const getGateway = () => {
   return globalThis.localStorage?.getItem("ipfs_gateway") || "w3s.link";
+}
+
+export const ftHoldersQuery = (tokenId: string) => `{
+  output(
+    where: {
+      token_category: { _eq: "\\\\x${tokenId}" }
+      fungible_token_amount: {_gt: 0}
+      _not: { spent_by: {} }
+    }
+    order_by: { fungible_token_amount: desc }
+  ) {
+    locking_bytecode
+    fungible_token_amount
+  }
+}`;
+
+export const fetchFtTokenHolders = async (tokenId: string) => {
+  let jsonResponse: { data?: { output?: [{locking_bytecode: string, fungible_token_amount: string}] } } = {};
+  try {
+    const response = await fetch("https://gql.chaingraph.pat.mn/v1/graphql", {
+      body: JSON.stringify({
+        operationName: null,
+        variables: {},
+        query: ftHoldersQuery(tokenId),
+      }),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      method: "POST",
+    });
+
+    const textResponse = await response.text();
+
+    jsonResponse = JSON.parse(textResponse.replaceAll("\\\\x", ""));
+  } catch {}
+
+  const result = (jsonResponse?.data?.output || []).map((holder: {locking_bytecode: string, fungible_token_amount: string}) => ({
+    address: (lockingBytecodeToCashAddress(hexToBin(holder.locking_bytecode), isActivated ? "bitcoincash" : "bchtest") as string),
+    amount: BigInt(holder.fungible_token_amount)
+  })).reduce((acc: {address: string, amount: bigint}[], holder) => {
+    const existingHolder = acc.find(h => h.address === holder.address);
+    if (existingHolder) {
+      existingHolder.amount += holder.amount;
+    } else {
+      acc.push(holder);
+    }
+    return acc;
+  }, []).sort((a, b) => Number(b.amount) - Number(a.amount)).map((holder) => ({
+    address: holder.address,
+    amount: Number(holder.amount)
+  }));
+  return result;
+}
+
+export const nftHoldersQuery = (tokenId: string) => `{
+  output(
+    where: {
+      token_category: { _eq: "\\\\x${tokenId}" }
+      fungible_token_amount: {_eq: 0}
+      nonfungible_token_capability: {_is_null: false}
+      _not: { spent_by: {} }
+    }
+    order_by: { fungible_token_amount: desc }
+  ) {
+    locking_bytecode
+  }
+}`;
+
+export const fetchNftTokenHolders = async (tokenId: string) => {
+  let jsonResponse: { data?: { output?: [{locking_bytecode: string, fungible_token_amount: string}] } } = {};
+  try {
+    const response = await fetch("https://gql.chaingraph.pat.mn/v1/graphql", {
+      body: JSON.stringify({
+        operationName: null,
+        variables: {},
+        query: nftHoldersQuery(tokenId),
+      }),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      method: "POST",
+    });
+
+    const textResponse = await response.text();
+
+    jsonResponse = JSON.parse(textResponse.replaceAll("\\\\x", ""));
+  } catch {}
+
+  const result = (jsonResponse?.data?.output || []).map((holder: {locking_bytecode: string, fungible_token_amount: string}) => ({
+    address: (lockingBytecodeToCashAddress(hexToBin(holder.locking_bytecode), isActivated ? "bitcoincash" : "bchtest") as string),
+    amount: 1
+  })).reduce((acc: {address: string, amount: number}[], holder) => {
+    const existingHolder = acc.find(h => h.address === holder.address);
+    if (existingHolder) {
+      existingHolder.amount += 1;
+    } else {
+      acc.push(holder);
+    }
+    return acc;
+  }, []).sort((a, b) => Number(b.amount) - Number(a.amount)).map((holder) => ({
+    address: holder.address,
+    amount: Number(holder.amount)
+  }));
+  return result;
 }

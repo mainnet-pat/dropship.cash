@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
     config.plugins = [
       ...config.plugins,
       new FilterWarningsPlugin({
-        exclude: [/Critical dependency/, /The generated code contains/],
+        exclude: [/Critical dependency/, /The generated code contains/, /Module not found/],
       })
     ];
 
