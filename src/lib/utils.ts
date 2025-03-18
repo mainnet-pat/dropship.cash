@@ -9,7 +9,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const isActivated = true;
+export const isActivated = process.env.NEXT_PUBLIC_USE_CHIPNET === "true";
 
 export const getFulcrum = () => {
   return globalThis.localStorage?.getItem("fulcrum") || (isActivated ? "electrum.imaginary.cash:50004" : "chipnet.bch.ninja:50004");
