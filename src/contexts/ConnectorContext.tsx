@@ -17,7 +17,7 @@ import {
 } from "react";
 import { AbiFunction, Artifact } from "cashscript";
 
-const USE_CHIPNET = false;
+export const USE_CHIPNET = false;
 
 declare global {
   var paytaca: IConnector | undefined

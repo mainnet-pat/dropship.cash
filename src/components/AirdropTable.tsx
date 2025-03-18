@@ -9,23 +9,12 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronDown, MoreHorizontal, Trash2 } from "lucide-react"
+import { ArrowUpDown, Lock, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -35,32 +24,38 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { getTokenImage, getTokenLabel } from "@/lib/utils"
 
 export const defaultData: Payment[] = [
   {
     id: "m5gr84i9",
-    amount: 316,
+    amount: 0,
     address: "bitcoincash:qzwfk507kmrs76gd2zefp3fer766r4v7cqw5td5s9c",
+    payout: 316,
   },
   {
     id: "3u1reuv4",
-    amount: 242,
+    amount: 0,
     address: "Abe45@example.com",
+    payout: 242
   },
   {
     id: "derv1ws0",
     amount: 837,
     address: "Monserrat44@example.com",
+    payout: 0
   },
   {
     id: "5kma53ae",
     amount: 874,
     address: "Silas22@example.com",
+    payout: 0
   },
   {
     id: "bhqecj4p",
     amount: 721,
     address: "carmella@example.com",
+    payout: 721
   },
 ]
 
@@ -68,6 +63,7 @@ export type Payment = {
   id: string
   amount: number
   address: string
+  payout: number
 }
 
 export const columns: ColumnDef<Payment>[] = [
@@ -88,19 +84,34 @@ export const columns: ColumnDef<Payment>[] = [
   },
   {
     accessorKey: "amount",
-    header: ({ column }) => {
+    header: ({ column, table }) => {
       return (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Amount
+          Amount FT/NFT {(table.options.meta as any)?.targetCategoryTicker}
+          <ArrowUpDown />
+        </Button>
+      )
+    },
+    cell: ({ row }) => <div className="lowercase text-right font-medium">{row.getValue("amount") || ""}</div>,
+  },
+  {
+    accessorKey: "payout",
+    header: ({ column, table }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Payout {(table.options.meta as any)?.sourceCategoryTicker}
           <ArrowUpDown />
         </Button>
       )
     },
     cell: ({ row, column, table }) => {
-      const initialValue = row.getValue<number>("amount")
+      const initialValue = row.getValue<number>("payout")
       const [value, setValue] = React.useState(initialValue)
       React.useEffect(() => {
         setValue(initialValue)
@@ -109,12 +120,15 @@ export const columns: ColumnDef<Payment>[] = [
         (table.options.meta as any)?.updateData(row.index, column.id, value)
       }
       return (
-        <Input
-          className="text-right font-medium text-sm"
-          value={value}
-          onChange={e => setValue(Number(e.target.value))}
-          onBlur={onBlur}
-        />
+        <div className="flex items-center gap-2">
+          {row.getValue<number>("amount") === 0 && <Lock size={16} />}
+          <Input
+            className="text-right font-medium text-sm"
+            value={value}
+            onChange={e => setValue(Number(e.target.value))}
+            onBlur={onBlur}
+          />
+        </div>
       )
     },
   },
@@ -132,15 +146,17 @@ export const columns: ColumnDef<Payment>[] = [
   },
 ]
 
-export function AirdropTable({data, setData} : {data: Payment[], setData: React.Dispatch<React.SetStateAction<Payment[]>>}) {
+export function AirdropTable({data, setData, sourceCategory, targetCategory, onRecalcPayoutClick} : {data: Payment[], setData: React.Dispatch<React.SetStateAction<Payment[]>>, sourceCategory?: string, targetCategory?: string, onRecalcPayoutClick: () => void}) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
+  const recipients = data.filter(element => element.payout > 0);
+
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
 
-  const table = useReactTable({
+  const table = useReactTable<Payment>({
     data,
     columns,
     onSortingChange: setSorting,
@@ -174,12 +190,14 @@ export function AirdropTable({data, setData} : {data: Payment[], setData: React.
           old.filter((_, index) => index !== rowIndex)
         );
       },
+      sourceCategoryTicker: getTokenLabel(sourceCategory!),
+      targetCategoryTicker: getTokenLabel(targetCategory!),
     },
   })
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="flex items-center pt-4">
         <Input
           placeholder="Filter data..."
           value={(table.getColumn("address")?.getFilterValue() as string) ?? ""}
@@ -188,9 +206,18 @@ export function AirdropTable({data, setData} : {data: Payment[], setData: React.
           }
           className="max-w-sm"
         />
-        <Button variant="outline" className="ml-auto" onClick={() => setData([])}>
-          Clear
-        </Button>
+        <div className="flex ml-auto space-x-2">
+          <Button variant="default" onClick={() => onRecalcPayoutClick()}>
+            Recalc Payouts
+          </Button>
+          <Button variant="outline" onClick={() => setData([])}>
+            Clear
+          </Button>
+        </div>
+      </div>
+      <div className="flex text-sm gap-2 pt-4 pb-2 items-center">
+        <div>Total recipients: {recipients.length}</div>
+        <div>Transactions needed: {Math.ceil(recipients.length / 1000)}</div>
       </div>
       <div className="rounded-md border">
         <Table>

@@ -2,7 +2,7 @@
 
 import { Check, ChevronsUpDown } from "lucide-react"
 
-import { addMissingBCMRs, cn, getTokenDecimals, getTokenImage, getTokenName } from "@/lib/utils"
+import { addMissingBCMRs, cn, getTokenImage, getTokenName } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Command,
