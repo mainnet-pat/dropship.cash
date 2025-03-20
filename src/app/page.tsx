@@ -247,21 +247,25 @@ export default function Home() {
     }
 
     setChainGraphLoading(true);
-    let tokenHolders = await fetchFtTokenHolders(targetCategory);
-    if (!includeContracts) {
-      tokenHolders = tokenHolders.filter((holder) => holder.address.includes(":p") === false);
+    try {
+      let tokenHolders = await fetchFtTokenHolders(targetCategory);
+      if (!includeContracts) {
+        tokenHolders = tokenHolders.filter((holder) => holder.address.includes(":p") === false);
+      }
+
+      const newData = tokenHolders
+        .map((holder, index) => ({ id: (data.length + index).toString(), amount: holder.amount, payout: 0, address: holder.address }))
+        .filter((payment) => {
+          if (data.find((existing) => existing.address === payment.address && existing.amount === payment.amount)) {
+            return false;
+          }
+          return true;
+        });
+
+      setData((prev) => [...prev, ...newData]);
+    } catch (e) {
+      toast.error("Error fetching token holders", { duration: 10000 });
     }
-
-    const newData = tokenHolders
-      .map((holder, index) => ({ id: (data.length + index).toString(), amount: holder.amount, payout: 0, address: holder.address }))
-      .filter((payment) => {
-        if (data.find((existing) => existing.address === payment.address && existing.amount === payment.amount)) {
-          return false;
-        }
-        return true;
-      });
-
-    setData((prev) => [...prev, ...newData]);
     setChainGraphLoading(false);
   }, [targetCategory, includeContracts, data]);
 
@@ -271,21 +275,25 @@ export default function Home() {
     }
 
     setChainGraphLoading(true);
-    let tokenHolders = await fetchNftTokenHolders(targetCategory);
-    if (!includeContracts) {
-      tokenHolders = tokenHolders.filter((holder) => holder.address.includes(":p") === false);
+    try {
+      let tokenHolders = await fetchNftTokenHolders(targetCategory);
+      if (!includeContracts) {
+        tokenHolders = tokenHolders.filter((holder) => holder.address.includes(":p") === false);
+      }
+
+      const newData = tokenHolders
+        .map((holder, index) => ({ id: (data.length + index).toString(), amount: holder.amount, payout: 0, address: holder.address }))
+        .filter((payment) => {
+          if (data.find((existing) => existing.address === payment.address && existing.amount === payment.amount)) {
+            return false;
+          }
+          return true;
+        });
+
+      setData((prev) => [...prev, ...newData]);
+    } catch {
+      toast.error("Error fetching token holders", { duration: 10000 });
     }
-
-    const newData = tokenHolders
-      .map((holder, index) => ({ id: (data.length + index).toString(), amount: holder.amount, payout: 0, address: holder.address }))
-      .filter((payment) => {
-        if (data.find((existing) => existing.address === payment.address && existing.amount === payment.amount)) {
-          return false;
-        }
-        return true;
-      });
-
-    setData((prev) => [...prev, ...newData]);
     setChainGraphLoading(false);
   }, [targetCategory, includeContracts, data]);
 

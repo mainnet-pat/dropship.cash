@@ -288,24 +288,23 @@ export const ftHoldersQuery = (tokenId: string) => `{
 
 export const fetchFtTokenHolders = async (tokenId: string) => {
   let jsonResponse: { data?: { output?: [{locking_bytecode: string, fungible_token_amount: string}] } } = {};
-  try {
-    const response = await fetch("https://gql.chaingraph.pat.mn/v1/graphql", {
-      body: JSON.stringify({
-        operationName: null,
-        variables: {},
-        query: ftHoldersQuery(tokenId),
-      }),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      method: "POST",
-    });
 
-    const textResponse = await response.text();
+  const response = await fetch("https://gql.chaingraph.pat.mn/v1/graphql", {
+    body: JSON.stringify({
+      operationName: null,
+      variables: {},
+      query: ftHoldersQuery(tokenId),
+    }),
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    method: "POST",
+  });
 
-    jsonResponse = JSON.parse(textResponse.replaceAll("\\\\x", ""));
-  } catch {}
+  const textResponse = await response.text();
+
+  jsonResponse = JSON.parse(textResponse.replaceAll("\\\\x", ""));
 
   const result = (jsonResponse?.data?.output || []).map((holder: {locking_bytecode: string, fungible_token_amount: string}) => ({
     address: (lockingBytecodeToCashAddress(hexToBin(holder.locking_bytecode), isChipnet ? "bchtest" : "bitcoincash") as string),
@@ -342,26 +341,25 @@ export const nftHoldersQuery = (tokenId: string, limit: number = 5000, offset: n
 
 export const fetchNftTokenHolders = async (tokenId: string) => {
   let jsonResponses: { data?: { output?: [{locking_bytecode: string}] } }[] = [];
-  try {
-    jsonResponses = await Promise.all(([0, 1]).map(async (page) => {
-      const response = await fetch("https://gql.chaingraph.pat.mn/v1/graphql", {
-        body: JSON.stringify({
-          operationName: null,
-          variables: {},
-          query: nftHoldersQuery(tokenId, 5000, page * 5000),
-        }),
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        method: "POST",
-      });
 
-      const textResponse = await response.text();
+  jsonResponses = await Promise.all(([0, 1]).map(async (page) => {
+    const response = await fetch("https://gql.chaingraph.pat.mn/v1/graphql", {
+      body: JSON.stringify({
+        operationName: null,
+        variables: {},
+        query: nftHoldersQuery(tokenId, 5000, page * 5000),
+      }),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      method: "POST",
+    });
 
-      return JSON.parse(textResponse.replaceAll("\\\\x", ""));
-    }));
-    } catch {}
+    const textResponse = await response.text();
+
+    return JSON.parse(textResponse.replaceAll("\\\\x", ""));
+  }));
 
   const jsonResponse = jsonResponses.reduce((acc, response) => {
     acc.data!.output!.push(...response.data?.output ?? []);
