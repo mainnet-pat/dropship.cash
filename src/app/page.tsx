@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { BCMR, SendRequest, TestNetWallet, TokenSendRequest, Wallet } from "mainnet-js";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FileDown, FileUp, LoaderCircle } from "lucide-react";
+import { FileDown, FileUp, Github, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -419,7 +419,7 @@ export default function Home() {
               </div>
             </div>
             </CardHeader>
-            <CardContent className="flex-col">
+            <CardContent className="flex-col text-center">
               <p>Send BCH and CashTokens to multiple recipients</p>
               <p>Connect your wallet to start airdrop configuration</p>
             </CardContent>
@@ -503,8 +503,9 @@ export default function Home() {
         </Card>
       </div>}
       {connectedAddress && targetCategory &&
-        <div className="mx-10 mt-5">
-          <div className="flex flex-row gap-2">
+        <div className="mx-10 mt-3">
+          <hr />
+          <div className="flex flex-row gap-2 mt-3">
             <div className="flex flex-col">
               <Input
                 className="font-medium text-sm"
@@ -541,9 +542,15 @@ export default function Home() {
             <div>
               <AirdropTable data={data} setData={setDataWithValidation} sourceCategory={sourceCategory} targetCategory={targetCategory} onRecalcPayoutClick={onRecalcPayoutClick} />
 
-              {<div className="my-5 text-sm text-right">
-                Brought to you by <Link className="text-blue-400" href="https://x.com/mainnet_pat">mainnet_pat</Link>
-                <div className="text-right underline decoration-dashed cursor-pointer" onClick={() => setShowDonationDialog(true)}>Consider a donation</div>
+              {<div className="my-5 text-sm flex flex-row justify-between w-full items-center gap-5">
+                <Link href="http://github.com/mainnet-pat/dropship.cash/" className="flex flex-row gap-1 items-center">
+                  <Github />
+                  <div className="text-blue-400">dropship.cash</div>
+                </Link>
+                <div className="flex flex-col">
+                  <div>Brought to you by <Link className="text-blue-400" href="https://x.com/mainnet_pat">mainnet_pat</Link>, funded by <Link className="text-blue-400" href="https://x.com/_minisatoshi">minisatoshi</Link> & <Link className="text-blue-400" href="https://t.me/@CatsupCash">CatsupCash</Link></div>
+                  <div className="text-right underline decoration-dashed cursor-pointer" onClick={() => setShowDonationDialog(true)}>Consider a donation</div>
+                </div>
               </div>}
             </div>
           }
@@ -580,9 +587,15 @@ export default function Home() {
           </DialogContent>
         </Dialog>
 
-        {(data.length === 0 && !showDonationDialog) && <div className="text-sm absolute bottom-5 right-5">
-          Brought to you by <Link className="text-blue-400" href="https://x.com/mainnet_pat">mainnet_pat</Link>
-          <div className="text-right underline decoration-dashed cursor-pointer" onClick={() => setShowDonationDialog(true)}>Consider a donation</div>
+        {(data.length === 0 && !showDonationDialog) && <div className="text-sm absolute bottom-5 flex flex-row justify-between w-full px-5 items-center gap-5">
+          <Link href="http://github.com/mainnet-pat/dropship.cash/" className="flex flex-row gap-1 items-center">
+            <Github />
+            <div className="text-blue-400">dropship.cash</div>
+          </Link>
+          <div className="flex flex-col">
+            <div>Brought to you by <Link className="text-blue-400" href="https://x.com/mainnet_pat">mainnet_pat</Link>, funded by <Link className="text-blue-400" href="https://x.com/_minisatoshi">minisatoshi</Link> & <Link className="text-blue-400" href="https://t.me/@CatsupCash">CatsupCash</Link></div>
+            <div className="text-right underline decoration-dashed cursor-pointer" onClick={() => setShowDonationDialog(true)}>Consider a donation</div>
+          </div>
         </div>}
     </div>
   );
