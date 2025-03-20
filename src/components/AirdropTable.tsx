@@ -27,12 +27,12 @@ import {
 import { getTokenDecimals, getTokenLabel, MaxPayoutsInTx } from "@/lib/utils"
 
 export const defaultData: Payment[] = [
-  // {
-  //   id: "m5gr84i9",
-  //   amount: 0,
-  //   address: "bitcoincash:qzwfk507kmrs76gd2zefp3fer766r4v7cqw5td5s9c",
-  //   payout: 316,
-  // },
+  {
+    id: "m5gr84i9",
+    amount: 0,
+    address: "bitcoincash:qzwfk507kmrs76gd2zefp3fer766r4v7cqw5td5s9c",
+    payout: 316,
+  },
   // {
   //   id: "3u1reuv4",
   //   amount: 0,
@@ -115,20 +115,20 @@ export const columns: ColumnDef<Payment>[] = [
     },
     cell: ({ row, column, table }) => {
       const initialValue = row.getValue<number>("payout")
-      const [value, setValue] = React.useState(initialValue)
-      React.useEffect(() => {
-        setValue(initialValue)
-      }, [initialValue])
-      const onBlur = () => {
-        (table.options.meta as any)?.updateData(row.index, column.id, value)
-      }
+      const [value, setValue] = React.useState<string>(initialValue.toLocaleString('en-US', { minimumFractionDigits: (table.options.meta as any)?.sourceCategoryDecimals }));
+
+      const onBlur = React.useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+        const parsed = Number(parseFloat(value.replaceAll(',', '')).toFixed((table.options.meta as any)?.sourceCategoryDecimals));
+        setValue(parsed.toLocaleString('en-US', { minimumFractionDigits: (table.options.meta as any)?.sourceCategoryDecimals }));
+        (table.options.meta as any)?.updateData(row.index, column.id, parsed)
+      }, [value]);
       return (
         <div className="flex items-center gap-2">
           {row.getValue<number>("amount") === 0 && <Lock size={16} />}
           <Input
             className="text-right font-medium font-mono text-xs md:text-sm"
-            value={value.toLocaleString('en-US', { minimumFractionDigits: (table.options.meta as any)?.sourceCategoryDecimals })}
-            onChange={e => setValue(parseFloat(e.target.value.replaceAll(',', '')))}
+            value={value}
+            onChange={e => setValue(e.target.value)}
             onBlur={onBlur}
           />
         </div>
