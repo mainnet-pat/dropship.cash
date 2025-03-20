@@ -253,8 +253,11 @@ export default function Home() {
         tokenHolders = tokenHolders.filter((holder) => holder.address.includes(":p") === false);
       }
 
+      const decimals = getTokenDecimals(targetCategory);
+      const decimalsFactor = 10**decimals;
+
       const newData = tokenHolders
-        .map((holder, index) => ({ id: (data.length + index).toString(), amount: holder.amount, payout: 0, address: holder.address }))
+        .map((holder, index) => ({ id: (data.length + index).toString(), amount: Number((holder.amount / decimalsFactor).toFixed(decimals)), payout: 0, address: holder.address }))
         .filter((payment) => {
           if (data.find((existing) => existing.address === payment.address && existing.amount === payment.amount)) {
             return false;

@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getTokenLabel, MaxPayoutsInTx } from "@/lib/utils"
+import { getTokenDecimals, getTokenLabel, MaxPayoutsInTx } from "@/lib/utils"
 
 export const defaultData: Payment[] = [
   // {
@@ -80,7 +80,10 @@ export const columns: ColumnDef<Payment>[] = [
         </Button>
       )
     },
-    cell: ({ row }) => <div className="lowercase font-mono">{row.getValue("address")}</div>,
+    cell: ({ row }) => <div className="lowercase font-mono overflow-hidden text-xs md:text-sm flex flex-row">
+      <div className="hidden md:block">{row.getValue<string>("address").split(":")[0]}:</div>
+      <div>{row.getValue<string>("address").split(":")[1]}</div>
+    </div>,
   },
   {
     accessorKey: "amount",
@@ -90,12 +93,12 @@ export const columns: ColumnDef<Payment>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Amount FT/NFT {(table.options.meta as any)?.targetCategoryTicker}
+          # FT/NFT {(table.options.meta as any)?.targetCategoryTicker}
           <ArrowUpDown />
         </Button>
       )
     },
-    cell: ({ row }) => <div className="lowercase text-right font-medium">{row.getValue("amount") || ""}</div>,
+    cell: ({ row, table }) => <div className="text-right font-medium font-mono text-xs md:text-sm">{row.getValue<number>("amount").toLocaleString('en-US', { minimumFractionDigits: (table.options.meta as any)?.targetCategoryDecimals }) || ""}</div>,
   },
   {
     accessorKey: "payout",
@@ -123,9 +126,9 @@ export const columns: ColumnDef<Payment>[] = [
         <div className="flex items-center gap-2">
           {row.getValue<number>("amount") === 0 && <Lock size={16} />}
           <Input
-            className="text-right font-medium text-sm"
-            value={value}
-            onChange={e => setValue(Number(e.target.value))}
+            className="text-right font-medium font-mono text-xs md:text-sm"
+            value={value.toLocaleString('en-US', { minimumFractionDigits: (table.options.meta as any)?.sourceCategoryDecimals })}
+            onChange={e => setValue(parseFloat(e.target.value.replaceAll(',', '')))}
             onBlur={onBlur}
           />
         </div>
@@ -192,6 +195,8 @@ export function AirdropTable({data, setData, sourceCategory, targetCategory, onR
       },
       sourceCategoryTicker: getTokenLabel(sourceCategory!),
       targetCategoryTicker: getTokenLabel(targetCategory!),
+      sourceCategoryDecimals: getTokenDecimals(sourceCategory!),
+      targetCategoryDecimals: getTokenDecimals(targetCategory!),
     },
   });
 
