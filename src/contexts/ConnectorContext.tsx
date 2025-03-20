@@ -16,8 +16,9 @@ import {
   useState,
 } from "react";
 import { AbiFunction, Artifact } from "cashscript";
+import { metadata } from "@/lib/utils";
 
-const USE_CHIPNET = false;
+export const USE_CHIPNET = process.env.NEXT_PUBLIC_USE_CHIPNET === "true";
 
 declare global {
   var paytaca: IConnector | undefined
@@ -108,13 +109,6 @@ export const DEFAULT_RELAY_URL = process.env.NEXT_PUBLIC_RELAY_URL;
 // export const DEFAULT_LOGGER = "debug";
 export const DEFAULT_LOGGER = undefined;
 
-export const DEFAULT_APP_METADATA = {
-  name: "TapSwap.cash",
-  description: "TapSwap Cashtokens Marketplace",
-  url: "https://tapswap.cash/",
-  icons: ["https://tapswap.cash/favicon.ico"],
-};
-
 const desktopWallets = [{
   id: "Cashonize",
   name: "Cashonize",
@@ -153,6 +147,13 @@ export class WalletConnect2Connector implements IConnector {
   chains: string[] = [];
   relayerRegion: string = DEFAULT_RELAY_URL!;
   events: EventEmitter = new EventEmitter();
+
+  DEFAULT_APP_METADATA = {
+    name: metadata.title,
+    description: metadata.description,
+    url: document.location.origin,
+    icons: [`${document.location.origin}}/favicon.ico`],
+  };
 
   constructor() {
     window.onunhandledrejection = (event) => {
@@ -333,7 +334,7 @@ export class WalletConnect2Connector implements IConnector {
         logger: DEFAULT_LOGGER,
         relayUrl: DEFAULT_RELAY_URL!,
         projectId: DEFAULT_PROJECT_ID,
-        metadata: DEFAULT_APP_METADATA || getAppMetadata(),
+        metadata: getAppMetadata(),
       });
     }
 

@@ -1,10 +1,10 @@
-import { getFulcrum, isActivated } from "@/lib/utils";
+import { getFulcrum, isChipnet } from "@/lib/utils";
 import { DefaultProvider, ElectrumNetworkProvider, TestNetWallet, UtxoI, Wallet } from "mainnet-js";
 import { useState, useEffect } from "react";
 
-const WalletClass = isActivated ? Wallet : TestNetWallet;
+const WalletClass = isChipnet ? TestNetWallet : Wallet;
 const fulcrum = getFulcrum();
-DefaultProvider.servers[isActivated ? "mainnet" : "testnet"] = [`wss://${fulcrum}`];
+DefaultProvider.servers[isChipnet ? "testnet" : "mainnet"] = [`wss://${fulcrum}`];
 
 export function useWatchAddress(address: string | undefined, tokenId?: string) {
   const [utxos, setUtxos] = useState<UtxoI[] | undefined>(undefined);

@@ -2,7 +2,7 @@
 
 import { Check, ChevronsUpDown } from "lucide-react"
 
-import { addMissingBCMRs, cn, getTokenDecimals, getTokenImage, getTokenName } from "@/lib/utils"
+import { addMissingBCMRs, cn, getTokenImage, getTokenName } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -59,7 +59,7 @@ export function TokenDropdown({categories, balancesByToken, onSelect, allowCusto
   const onCustomTokenSelect = useCallback(async (value: string) => {
     setOpen(false);
     onSelect?.(value);
-  }, []);
+  }, [onSelect]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

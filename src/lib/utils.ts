@@ -1,23 +1,65 @@
-import { Transaction } from "@bitauth/libauth";
+import { lockingBytecodeToCashAddress, Transaction } from "@bitauth/libauth";
 import { clsx, type ClassValue } from "clsx"
-import { BCMR, AuthChainElement, hexToBin } from "mainnet-js";
+import { BCMR, AuthChainElement, hexToBin, Registry } from "mainnet-js";
 import { twMerge } from "tailwind-merge"
 // @ts-ignore
 import { default as blockies } from "blockies";
+import { Metadata } from "next";
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
+export const metadata: Metadata = {
+  title: "Dropship.Cash",
+  description: "BCH Airdrop Tool dApp",
+};
 
-export const isActivated = true;
+export const MaxPayoutsInTx = 1000;
+
+export const BCHCategory = "0000000000000000000000000000000000000000000000000000000000000000";
+export const BCHBcmr: Registry = {
+  "$schema": "https://cashtokens.org/bcmr-v2.schema.json",
+  "version": {
+      "major": 0,
+      "minor": 1,
+      "patch": 0
+  },
+  "latestRevision": "2023-06-23T12:45:07.755Z",
+  "registryIdentity": {
+      "name": "bcmr for BCH",
+      "description": "self-published bcmr for BCH"
+  },
+  "identities": {
+      "0000000000000000000000000000000000000000000000000000000000000000": {
+          "2023-06-23T12:45:07.755Z": {
+              "name": "BCH",
+              "description": "BitcoinCash",
+              "token": {
+                  "category": "0000000000000000000000000000000000000000000000000000000000000000",
+                  "symbol": "BCH",
+                  "decimals": 8
+              },
+              "uris": {
+                  "icon": "https://minisatoshi.cash/images/Resources/Branding/9-bitcoin-cash-circle.svg"
+              }
+          }
+      }
+  }
+};
+
+export const isChipnet = process.env.NEXT_PUBLIC_USE_CHIPNET === "true";
 
 export const getFulcrum = () => {
-  return globalThis.localStorage?.getItem("fulcrum") || (isActivated ? "electrum.imaginary.cash:50004" : "chipnet.bch.ninja:50004");
+  return globalThis.localStorage?.getItem("fulcrum") || (isChipnet ? "chipnet.bch.ninja:50004" : "electrum.imaginary.cash:50004");
 }
 
-const queried: string[] = [];
+export const chunkArrayInGroups = <T>(arr: Array<T>, size: number) => {
+  var myArray: T[][] = [];
+  for(var i = 0; i < arr.length; i += size) {
+    myArray.push(arr.slice(i, i+size));
+  }
+  return myArray;
+}
 
 const cacheTime = 1000 * 60 * 60 * 24; // 1 day
+const queried: string[] = [];
 
 export const addMissingBCMRs = async (categories: string[]) => {
   const now = Date.now();
@@ -44,14 +86,6 @@ export const addMissingBCMRs = async (categories: string[]) => {
     return;
   }
   queried.push(...categories);
-
-  const chunkArrayInGroups = (arr: Array<string>, size: number) => {
-    var myArray: string[][] = [];
-    for(var i = 0; i < arr.length; i += size) {
-      myArray.push(arr.slice(i, i+size));
-    }
-    return myArray;
-  }
 
   await Promise.all(chunkArrayInGroups(categories, 6).map(group => addMissingBCMRsInternal(group)));
 }
@@ -236,4 +270,114 @@ export const convertIpfsLink = (uri: string | undefined, preferredGateway?: stri
 
 export const getGateway = () => {
   return globalThis.localStorage?.getItem("ipfs_gateway") || "w3s.link";
+}
+
+export const ftHoldersQuery = (tokenId: string) => `{
+  output(
+    where: {
+      token_category: { _eq: "\\\\x${tokenId}" }
+      fungible_token_amount: {_gt: 0}
+      _not: { spent_by: {} }
+    }
+    order_by: { fungible_token_amount: desc }
+  ) {
+    locking_bytecode
+    fungible_token_amount
+  }
+}`;
+
+export const fetchFtTokenHolders = async (tokenId: string) => {
+  let jsonResponse: { data?: { output?: [{locking_bytecode: string, fungible_token_amount: string}] } } = {};
+  try {
+    const response = await fetch("https://gql.chaingraph.pat.mn/v1/graphql", {
+      body: JSON.stringify({
+        operationName: null,
+        variables: {},
+        query: ftHoldersQuery(tokenId),
+      }),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      method: "POST",
+    });
+
+    const textResponse = await response.text();
+
+    jsonResponse = JSON.parse(textResponse.replaceAll("\\\\x", ""));
+  } catch {}
+
+  const result = (jsonResponse?.data?.output || []).map((holder: {locking_bytecode: string, fungible_token_amount: string}) => ({
+    address: (lockingBytecodeToCashAddress(hexToBin(holder.locking_bytecode), isChipnet ? "bchtest" : "bitcoincash") as string),
+    amount: BigInt(holder.fungible_token_amount)
+  })).reduce((acc: {address: string, amount: bigint}[], holder) => {
+    const existingHolder = acc.find(h => h.address === holder.address);
+    if (existingHolder) {
+      existingHolder.amount += holder.amount;
+    } else {
+      acc.push(holder);
+    }
+    return acc;
+  }, []).sort((a, b) => Number(b.amount) - Number(a.amount)).map((holder) => ({
+    address: holder.address,
+    amount: Number(holder.amount)
+  }));
+  return result;
+}
+
+export const nftHoldersQuery = (tokenId: string) => `{
+  output(
+    where: {
+      token_category: { _eq: "\\\\x${tokenId}" }
+      fungible_token_amount: {_eq: 0}
+      nonfungible_token_capability: {_is_null: false}
+      _not: { spent_by: {} }
+    }
+    order_by: { fungible_token_amount: desc }
+  ) {
+    locking_bytecode
+  }
+}`;
+
+export const fetchNftTokenHolders = async (tokenId: string) => {
+  let jsonResponse: { data?: { output?: [{locking_bytecode: string, fungible_token_amount: string}] } } = {};
+  try {
+    const response = await fetch("https://gql.chaingraph.pat.mn/v1/graphql", {
+      body: JSON.stringify({
+        operationName: null,
+        variables: {},
+        query: nftHoldersQuery(tokenId),
+      }),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      method: "POST",
+    });
+
+    const textResponse = await response.text();
+
+    jsonResponse = JSON.parse(textResponse.replaceAll("\\\\x", ""));
+  } catch {}
+
+  const result = (jsonResponse?.data?.output || []).map((holder: {locking_bytecode: string, fungible_token_amount: string}) => ({
+    address: (lockingBytecodeToCashAddress(hexToBin(holder.locking_bytecode), isChipnet ? "bchtest" : "bitcoincash") as string),
+    amount: 1
+  })).reduce((acc: {address: string, amount: number}[], holder) => {
+    const existingHolder = acc.find(h => h.address === holder.address);
+    if (existingHolder) {
+      existingHolder.amount += 1;
+    } else {
+      acc.push(holder);
+    }
+    return acc;
+  }, []).sort((a, b) => Number(b.amount) - Number(a.amount)).map((holder) => ({
+    address: holder.address,
+    amount: Number(holder.amount)
+  }));
+  return result;
+}
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
 }
