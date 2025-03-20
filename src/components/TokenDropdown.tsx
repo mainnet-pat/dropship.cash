@@ -71,7 +71,7 @@ export function TokenDropdown({categories, balancesByToken, onSelect, allowCusto
           className="w-full justify-between"
         >
           {(!value && !customTokenInfo) && "Select token..."}
-          {value && <div className="flex flex-row gap-2 items-center">
+          {value && !customTokenInfo && <div className="flex flex-row gap-2 items-center">
             <div>
               <img className="rounded-full" src={tokenImages[value]} width={24} height={24} />
             </div>
