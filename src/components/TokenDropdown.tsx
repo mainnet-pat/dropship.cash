@@ -117,6 +117,7 @@ export function TokenDropdown({categories, balancesByToken, onSelect, allowCusto
                 <CommandItem
                   key={category}
                   value={category}
+                  keywords={[tokenNames[category]]}
                   onSelect={(currentValue) => {
                     setValue(currentValue)
                     onSelect(currentValue)
