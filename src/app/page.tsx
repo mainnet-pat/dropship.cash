@@ -451,6 +451,9 @@ export default function Home() {
           </Card>
         </div>
       }
+      {connectedAddress && <div className="flex flex-col items-center mb-5">
+        <img className="max-h-[100px]" src="/logo.svg" />
+      </div>}
       {connectedAddress && utxos && <div className="flex">
         <Card className="w-[350px] mx-auto">
           <CardHeader className="font-semibold text-2xl">
