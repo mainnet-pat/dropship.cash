@@ -41,6 +41,7 @@ export default function Home() {
   const [showFinishTransactionModal, setShowFinishTransactionModal] = useState<boolean>(false);
   const [showDonationDialog, setShowDonationDialog] = useState<boolean>(false);
   const [finishTransactionMessage, setFinishTransactionMessage] = useState<string>("");
+  const [chaingraphLoading, setChainGraphLoading] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
@@ -245,11 +246,23 @@ export default function Home() {
       return;
     }
 
+    setChainGraphLoading(true);
     let tokenHolders = await fetchFtTokenHolders(targetCategory);
     if (!includeContracts) {
       tokenHolders = tokenHolders.filter((holder) => holder.address.includes(":p") === false);
     }
-    setData((prev) => [...prev, ...tokenHolders.map((holder, index) => ({ id: (data.length + index).toString(), amount: holder.amount, payout: 0, address: holder.address }))]);
+
+    const newData = tokenHolders
+      .map((holder, index) => ({ id: (data.length + index).toString(), amount: holder.amount, payout: 0, address: holder.address }))
+      .filter((payment) => {
+        if (data.find((existing) => existing.address === payment.address && existing.amount === payment.amount)) {
+          return false;
+        }
+        return true;
+      });
+
+    setData((prev) => [...prev, ...newData]);
+    setChainGraphLoading(false);
   }, [targetCategory, includeContracts, data]);
 
   const onLoadNftHoldersFromChaingraphClick = useCallback(async () => {
@@ -257,11 +270,23 @@ export default function Home() {
       return;
     }
 
+    setChainGraphLoading(true);
     let tokenHolders = await fetchNftTokenHolders(targetCategory);
     if (!includeContracts) {
       tokenHolders = tokenHolders.filter((holder) => holder.address.includes(":p") === false);
     }
-    setData((prev) => [...prev, ...tokenHolders.map((holder, index) => ({ id: (data.length + index).toString(), amount: holder.amount, payout: 0, address: holder.address }))]);
+
+    const newData = tokenHolders
+      .map((holder, index) => ({ id: (data.length + index).toString(), amount: holder.amount, payout: 0, address: holder.address }))
+      .filter((payment) => {
+        if (data.find((existing) => existing.address === payment.address && existing.amount === payment.amount)) {
+          return false;
+        }
+        return true;
+      });
+
+    setData((prev) => [...prev, ...newData]);
+    setChainGraphLoading(false);
   }, [targetCategory, includeContracts, data]);
 
   const onStrategyChange = useCallback((value: string) => {
@@ -462,11 +487,11 @@ export default function Home() {
               <Card className="py-4 mt-4">
                 <CardContent className="px-3">
                   <div className="flex items-center space-x-2">
-                    <Button onClick={() => onLoadFtHoldersFromChaingraphClick()}>
+                    <Button onClick={() => onLoadFtHoldersFromChaingraphClick()} disabled={chaingraphLoading}>
                       Get FT holders
                     </Button>
 
-                    <Button onClick={() => onLoadNftHoldersFromChaingraphClick()}>
+                    <Button onClick={() => onLoadNftHoldersFromChaingraphClick()} disabled={chaingraphLoading}>
                       Get NFT holders
                     </Button>
                   </div>

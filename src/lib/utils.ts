@@ -325,7 +325,7 @@ export const fetchFtTokenHolders = async (tokenId: string) => {
   return result;
 }
 
-export const nftHoldersQuery = (tokenId: string) => `{
+export const nftHoldersQuery = (tokenId: string, limit: number = 5000, offset: number = 0) => `{
   output(
     where: {
       token_category: { _eq: "\\\\x${tokenId}" }
@@ -333,34 +333,42 @@ export const nftHoldersQuery = (tokenId: string) => `{
       nonfungible_token_capability: {_is_null: false}
       _not: { spent_by: {} }
     }
-    order_by: { fungible_token_amount: desc }
+    offset: ${offset}
+    limit: ${limit}
   ) {
     locking_bytecode
   }
 }`;
 
 export const fetchNftTokenHolders = async (tokenId: string) => {
-  let jsonResponse: { data?: { output?: [{locking_bytecode: string, fungible_token_amount: string}] } } = {};
+  let jsonResponses: { data?: { output?: [{locking_bytecode: string}] } }[] = [];
   try {
-    const response = await fetch("https://gql.chaingraph.pat.mn/v1/graphql", {
-      body: JSON.stringify({
-        operationName: null,
-        variables: {},
-        query: nftHoldersQuery(tokenId),
-      }),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      method: "POST",
-    });
+    jsonResponses = await Promise.all(([0, 1]).map(async (page) => {
+      const response = await fetch("https://gql.chaingraph.pat.mn/v1/graphql", {
+        body: JSON.stringify({
+          operationName: null,
+          variables: {},
+          query: nftHoldersQuery(tokenId, 5000, page * 5000),
+        }),
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        method: "POST",
+      });
 
-    const textResponse = await response.text();
+      const textResponse = await response.text();
 
-    jsonResponse = JSON.parse(textResponse.replaceAll("\\\\x", ""));
-  } catch {}
+      return JSON.parse(textResponse.replaceAll("\\\\x", ""));
+    }));
+    } catch {}
 
-  const result = (jsonResponse?.data?.output || []).map((holder: {locking_bytecode: string, fungible_token_amount: string}) => ({
+  const jsonResponse = jsonResponses.reduce((acc, response) => {
+    acc.data!.output!.push(...response.data?.output ?? []);
+    return acc;
+  }, { data: { output: [] } } as unknown as { data: { output: [{locking_bytecode: string}] } });
+
+  const result = (jsonResponse?.data?.output || []).map((holder: {locking_bytecode: string}) => ({
     address: (lockingBytecodeToCashAddress(hexToBin(holder.locking_bytecode), isChipnet ? "bchtest" : "bitcoincash") as string),
     amount: 1
   })).reduce((acc: {address: string, amount: number}[], holder) => {
