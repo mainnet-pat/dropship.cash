@@ -416,8 +416,8 @@ export default function Home() {
         {isChipnet && <div className="flex text-red-500 w-full justify-center">This is a testnet version</div>}
         {!connectedAddress && <Button onClick={() => connect("WalletConnectV2")}>Connect Wallet</Button>}
         {connectedAddress && <Button onClick={disconnectWallet}>Disconnect Wallet</Button>}
-        {connectedAddress && <p>Connected Address: {connectedAddress}</p>}
-        {connectedAddress && balance && <p>Balance: {balance/1e8} BCH</p>}
+        {connectedAddress && <div className="text-right">Connected Address: <div className="flex flex-row"><div className="hidden sm:block">{connectedAddress.split(":")[0]}:</div>{connectedAddress.split(":")[1]}</div></div>}
+        {connectedAddress && balance && <p className="text-right">Balance: {balance/1e8} BCH</p>}
         {categories && <p className="underline decoration-dashed" onClick={() => setShowWallet(!showWallet)}>Assets: {categories.length}</p>}
         {showWallet && <ScrollArea className="h-72 rounded-md border p-3">
           <div className="flex flex-col">
@@ -466,7 +466,7 @@ export default function Home() {
         <img className="max-h-[100px]" src="/logo.svg" />
       </div>}
       {connectedAddress && utxos && <div className="flex">
-        <Card className="w-[350px] mx-auto">
+        <Card className="w-[350px] mx-2 md:mx-auto">
           <CardHeader className="font-semibold text-2xl">
             Airdrop configuration
           </CardHeader>
@@ -542,7 +542,7 @@ export default function Home() {
         </Card>
       </div>}
       {connectedAddress && targetCategory &&
-        <div className="mx-10 mt-3">
+        <div className="mx-2 md:mx-10 mt-3">
           <hr />
           <div className="flex flex-row gap-2 mt-3">
             <div className="flex flex-col">

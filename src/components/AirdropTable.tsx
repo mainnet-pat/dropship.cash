@@ -27,35 +27,11 @@ import {
 import { getTokenDecimals, getTokenLabel, MaxPayoutsInTx } from "@/lib/utils"
 
 export const defaultData: Payment[] = [
-  {
-    id: "m5gr84i9",
-    amount: 0,
-    address: "bitcoincash:qzwfk507kmrs76gd2zefp3fer766r4v7cqw5td5s9c",
-    payout: 316,
-  },
   // {
-  //   id: "3u1reuv4",
+  //   id: "m5gr84i9",
   //   amount: 0,
-  //   address: "Abe45@example.com",
-  //   payout: 242
-  // },
-  // {
-  //   id: "derv1ws0",
-  //   amount: 837,
-  //   address: "Monserrat44@example.com",
-  //   payout: 0
-  // },
-  // {
-  //   id: "5kma53ae",
-  //   amount: 874,
-  //   address: "Silas22@example.com",
-  //   payout: 0
-  // },
-  // {
-  //   id: "bhqecj4p",
-  //   amount: 721,
-  //   address: "carmella@example.com",
-  //   payout: 721
+  //   address: "bitcoincash:qzwfk507kmrs76gd2zefp3fer766r4v7cqw5td5s9c",
+  //   payout: 316,
   // },
 ]
 
@@ -75,13 +51,13 @@ export const columns: ColumnDef<Payment>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Cashaddress
+          Address
           <ArrowUpDown />
         </Button>
       )
     },
-    cell: ({ row }) => <div className="lowercase font-mono overflow-hidden text-xs md:text-sm flex flex-row">
-      <div className="hidden md:block">{row.getValue<string>("address").split(":")[0]}:</div>
+    cell: ({ row }) => <div className="lowercase font-mono overflow-hidden text-xs md:text-sm flex flex-row w-[125px] md:w-[240px] lg:w-auto">
+      <div className="hidden lg:block">{row.getValue<string>("address").split(":")[0]}:</div>
       <div>{row.getValue<string>("address").split(":")[1]}</div>
     </div>,
   },
@@ -89,13 +65,16 @@ export const columns: ColumnDef<Payment>[] = [
     accessorKey: "amount",
     header: ({ column, table }) => {
       return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          # FT/NFT {(table.options.meta as any)?.targetCategoryTicker}
-          <ArrowUpDown />
-        </Button>
+        <div className="flex flex-col items-end">
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            <span className="hidden md:block"># FT/NFT</span>
+            {(table.options.meta as any)?.targetCategoryTicker}
+            <ArrowUpDown />
+          </Button>
+        </div>
       )
     },
     cell: ({ row, table }) => <div className="text-right font-medium font-mono text-xs md:text-sm">{row.getValue<number>("amount").toLocaleString('en-US', { minimumFractionDigits: (table.options.meta as any)?.targetCategoryDecimals }) || ""}</div>,
@@ -104,13 +83,16 @@ export const columns: ColumnDef<Payment>[] = [
     accessorKey: "payout",
     header: ({ column, table }) => {
       return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Payout {(table.options.meta as any)?.sourceCategoryTicker}
-          <ArrowUpDown />
-        </Button>
+        <div className="flex flex-col items-end">
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            <span className="hidden md:block">Payout</span>
+            {(table.options.meta as any)?.sourceCategoryTicker}
+            <ArrowUpDown />
+          </Button>
+        </div>
       )
     },
     cell: ({ row, column, table }) => {
