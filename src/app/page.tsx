@@ -586,9 +586,9 @@ export default function Home() {
                   <Github />
                   <div className="text-blue-400">dropship.cash</div>
                 </Link>
-                <div className="flex flex-col">
+                <div className="flex flex-col text-right">
                   <div>Brought to you by <Link className="text-blue-400" href="https://x.com/mainnet_pat">mainnet_pat</Link>, funded by <Link className="text-blue-400" href="https://x.com/_minisatoshi">minisatoshi</Link> & <Link className="text-blue-400" href="https://t.me/@CatsupCash">CatsupCash</Link></div>
-                  <div className="text-right underline decoration-dashed cursor-pointer" onClick={() => setShowDonationDialog(true)}>Consider a donation</div>
+                  <div className="underline decoration-dashed cursor-pointer" onClick={() => setShowDonationDialog(true)}>Consider a donation</div>
                 </div>
               </div>}
             </div>
@@ -626,14 +626,14 @@ export default function Home() {
           </DialogContent>
         </Dialog>
 
-        {(data.length === 0 && !showDonationDialog) && <div className="text-sm absolute bottom-5 flex flex-row justify-between w-full px-5 items-center gap-5">
+        {(data.length === 0 && !showDonationDialog) && <div className="flex flex-row text-sm fixed bottom-5 justify-between w-full px-5 items-center gap-5">
           <Link href="http://github.com/mainnet-pat/dropship.cash/" className="flex flex-row gap-1 items-center">
             <Github />
             <div className="text-blue-400">dropship.cash</div>
           </Link>
-          <div className="flex flex-col">
-            <div>Brought to you by <Link className="text-blue-400" href="https://x.com/mainnet_pat">mainnet_pat</Link>, funded by <Link className="text-blue-400" href="https://x.com/_minisatoshi">minisatoshi</Link> & <Link className="text-blue-400" href="https://t.me/@CatsupCash">CatsupCash</Link></div>
-            <div className="text-right underline decoration-dashed cursor-pointer" onClick={() => setShowDonationDialog(true)}>Consider a donation</div>
+          <div className="flex flex-col text-right">
+            <div className="hidden md:block ">Brought to you by <Link className="text-blue-400" href="https://x.com/mainnet_pat">mainnet_pat</Link>, funded by <Link className="text-blue-400" href="https://x.com/_minisatoshi">minisatoshi</Link> & <Link className="text-blue-400" href="https://t.me/@CatsupCash">CatsupCash</Link></div>
+            <div className="underline decoration-dashed cursor-pointer" onClick={() => setShowDonationDialog(true)}>Consider a donation</div>
           </div>
         </div>}
     </div>
