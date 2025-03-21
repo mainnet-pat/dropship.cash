@@ -466,7 +466,7 @@ export default function Home() {
         <img className="max-h-[100px]" src="/logo.svg" />
       </div>}
       {connectedAddress && utxos && <div className="flex">
-        <Card className="w-[350px] mx-2 md:mx-auto">
+        <Card className="w-[350px] mx-auto">
           <CardHeader className="font-semibold text-2xl">
             Airdrop configuration
           </CardHeader>
