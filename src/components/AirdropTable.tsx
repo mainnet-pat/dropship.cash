@@ -24,12 +24,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getTokenDecimals, getTokenLabel, MaxPayoutsInTx } from "@/lib/utils"
+import { getTokenDecimals, getTokenImage, getTokenLabel, getTokenName, MaxPayoutsInTx } from "@/lib/utils"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card"
 
 export const defaultData: Payment[] = [
   // {
   //   id: "m5gr84i9",
-  //   amount: 0,
+  //   amount: 1,
+  //   commitment: "bb00",
   //   address: "bitcoincash:qzwfk507kmrs76gd2zefp3fer766r4v7cqw5td5s9c",
   //   payout: 316,
   // },
@@ -38,6 +40,7 @@ export const defaultData: Payment[] = [
 export type Payment = {
   id: string
   amount: number
+  commitment: string
   address: string
   payout: number
 }
@@ -78,6 +81,36 @@ export const columns: ColumnDef<Payment>[] = [
       )
     },
     cell: ({ row, table }) => <div className="text-right font-medium font-mono text-xs md:text-sm">{row.getValue<number>("amount").toLocaleString('en-US', { minimumFractionDigits: (table.options.meta as any)?.targetCategoryDecimals }) || ""}</div>,
+  },
+  {
+    accessorKey: "commitment",
+    header: ({ column }) => {
+      return (
+        <div className="flex flex-col items-end">
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            <span className="hidden md:block">#</span>
+            <ArrowUpDown />
+          </Button>
+        </div>
+      )
+    },
+    cell: ({ row, table }) => <HoverCard>
+      <HoverCardTrigger>
+        <div className="text-right font-medium font-mono text-xs md:text-sm underline decoration-dashed">{row.getValue<string>("commitment") || ""}</div>
+      </HoverCardTrigger>
+      <HoverCardContent>
+        <div className="flex flex-row gap-2 items-center">
+          <img className="rounded-full w-[64px] h-[64px]" src={getTokenImage((table.options.meta as any)?.targetCategoryTokenId, row.getValue<string>("commitment"))} width={64} height={64} />
+          <div className="flex flex-col gap-1">
+            <div className="text-lg font-bold">{getTokenName((table.options.meta as any)?.targetCategoryTokenId, row.getValue<string>("commitment"))}</div>
+            <div className="text-sm">#{row.getValue<string>("commitment")}</div>
+          </div>
+        </div>
+      </HoverCardContent>
+    </HoverCard>,
   },
   {
     accessorKey: "payout",
@@ -138,8 +171,12 @@ export function AirdropTable({data, setData, sourceCategory, targetCategory, onR
   )
   const recipients = data.filter(element => element.payout > 0);
 
+  const commitmentVisible = data.some(element => element.commitment !== "");
+
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+    React.useState<VisibilityState>({
+      commitment: commitmentVisible,
+    })
 
   const table = useReactTable<Payment>({
     data,
@@ -175,6 +212,7 @@ export function AirdropTable({data, setData, sourceCategory, targetCategory, onR
           old.filter((_, index) => index !== rowIndex)
         );
       },
+      targetCategoryTokenId: targetCategory,
       sourceCategoryTicker: getTokenLabel(sourceCategory!),
       targetCategoryTicker: getTokenLabel(targetCategory!),
       sourceCategoryDecimals: getTokenDecimals(sourceCategory!),

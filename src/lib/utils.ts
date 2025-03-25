@@ -243,15 +243,27 @@ export const getTokenAmount = (tokenId: string, rawAmount: number) => {
 }
 
 
-export const getTokenImage = (tokenId: string): string => {
+export const getTokenImage = (tokenId: string, commitment?: string): string => {
   const bcmr = BCMR.getTokenInfo(tokenId);
-  const asset = bcmr?.uris?.asset;
-  const icon = bcmr?.uris?.icon;
 
+  if (commitment !== undefined) {
+    const hasTokenAsset = bcmr?.token?.nfts?.parse?.types?.[commitment ?? ""]?.uris?.asset;
+    if (hasTokenAsset) {
+      return convertIpfsLink(hasTokenAsset)!;
+    }
+
+    const hasTokenIcon = bcmr?.token?.nfts?.parse?.types?.[commitment ?? ""]?.uris?.icon;
+    if (hasTokenIcon) {
+      return convertIpfsLink(hasTokenIcon)!;
+    }
+  }
+
+  const asset = bcmr?.uris?.asset;
   if (asset) {
     return convertIpfsLink(asset)!;
   }
 
+  const icon = bcmr?.uris?.icon;
   if (icon) {
     return convertIpfsLink(icon)!;
   }
@@ -319,7 +331,8 @@ export const fetchFtTokenHolders = async (tokenId: string) => {
     return acc;
   }, []).sort((a, b) => Number(b.amount) - Number(a.amount)).map((holder) => ({
     address: holder.address,
-    amount: Number(holder.amount)
+    amount: Number(holder.amount),
+    commitment: "",
   }));
   return result;
 }
@@ -336,11 +349,12 @@ export const nftHoldersQuery = (tokenId: string, limit: number = 5000, offset: n
     limit: ${limit}
   ) {
     locking_bytecode
+    nonfungible_token_commitment
   }
 }`;
 
 export const fetchNftTokenHolders = async (tokenId: string) => {
-  let jsonResponses: { data?: { output?: [{locking_bytecode: string}] } }[] = [];
+  let jsonResponses: { data?: { output?: [{locking_bytecode: string, nonfungible_token_commitment: string}] } }[] = [];
 
   jsonResponses = await Promise.all(([0, 1]).map(async (page) => {
     const response = await fetch("https://gql.chaingraph.pat.mn/v1/graphql", {
@@ -364,13 +378,14 @@ export const fetchNftTokenHolders = async (tokenId: string) => {
   const jsonResponse = jsonResponses.reduce((acc, response) => {
     acc.data!.output!.push(...response.data?.output ?? []);
     return acc;
-  }, { data: { output: [] } } as unknown as { data: { output: [{locking_bytecode: string}] } });
+  }, { data: { output: [] } } as unknown as { data: { output: [{locking_bytecode: string, nonfungible_token_commitment: string}] } });
 
-  const result = (jsonResponse?.data?.output || []).map((holder: {locking_bytecode: string}) => ({
+  const result = (jsonResponse?.data?.output || []).map((holder: {locking_bytecode: string, nonfungible_token_commitment: string}) => ({
     address: (lockingBytecodeToCashAddress(hexToBin(holder.locking_bytecode), isChipnet ? "bchtest" : "bitcoincash") as string),
-    amount: 1
-  })).reduce((acc: {address: string, amount: number}[], holder) => {
-    const existingHolder = acc.find(h => h.address === holder.address);
+    amount: 1,
+    commitment: holder.nonfungible_token_commitment
+  })).reduce((acc: {address: string, amount: number, commitment: string}[], holder) => {
+    const existingHolder = acc.find(h => h.address === holder.address && h.commitment === holder.commitment);
     if (existingHolder) {
       existingHolder.amount += 1;
     } else {
@@ -379,7 +394,8 @@ export const fetchNftTokenHolders = async (tokenId: string) => {
     return acc;
   }, []).sort((a, b) => Number(b.amount) - Number(a.amount)).map((holder) => ({
     address: holder.address,
-    amount: Number(holder.amount)
+    amount: Number(holder.amount),
+    commitment: holder.commitment
   }));
   return result;
 }

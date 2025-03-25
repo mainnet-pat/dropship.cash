@@ -222,7 +222,7 @@ export default function Home() {
   }, [budget, data]);
 
   const onAddButtonClick = useCallback(() => {
-    setData((prev) => [{ id: data.length.toString(), amount: 0, payout: parseFloat(inputPayout), address: inputAddress }, ...prev]);
+    setData((prev) => [{ id: data.length.toString(), amount: 0, commitment: "", payout: parseFloat(inputPayout), address: inputAddress }, ...prev]);
     setInputAddress("");
     setInputPayout("");
     setAddressValidationError("");
@@ -257,9 +257,9 @@ export default function Home() {
       const decimalsFactor = 10**decimals;
 
       const newData = tokenHolders
-        .map((holder, index) => ({ id: (data.length + index).toString(), amount: Number((holder.amount / decimalsFactor).toFixed(decimals)), payout: 0, address: holder.address }))
+        .map((holder, index) => ({ id: (data.length + index).toString(), amount: Number((holder.amount / decimalsFactor).toFixed(decimals)), commitment: holder.commitment, payout: 0, address: holder.address }))
         .filter((payment) => {
-          if (data.find((existing) => existing.address === payment.address && existing.amount === payment.amount)) {
+          if (data.find((existing) => existing.address === payment.address && existing.amount === payment.amount && existing.commitment === payment.commitment)) {
             return false;
           }
           return true;
@@ -285,9 +285,9 @@ export default function Home() {
       }
 
       const newData = tokenHolders
-        .map((holder, index) => ({ id: (data.length + index).toString(), amount: holder.amount, payout: 0, address: holder.address }))
+        .map((holder, index) => ({ id: (data.length + index).toString(), amount: holder.amount, commitment: holder.commitment, payout: 0, address: holder.address }))
         .filter((payment) => {
-          if (data.find((existing) => existing.address === payment.address && existing.amount === payment.amount)) {
+          if (data.find((existing) => existing.address === payment.address && existing.amount === payment.amount && existing.commitment === payment.commitment)) {
             return false;
           }
           return true;
@@ -378,7 +378,7 @@ export default function Home() {
   }, [fullValidationError, connectedAddress, data, signTransaction, sourceCategory]);
 
   const exportToCsv = useCallback(() => {
-    const csv = data.map(row => `${row.address},${row.amount},${row.payout}`).join("\n");
+    const csv = data.map(row => `${row.address},${row.amount},${row.commitment},${row.payout}`).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -399,10 +399,11 @@ export default function Home() {
       }
       const text = await file.text();
       const rows = text.split("\n").map(row => row.split(","));
-      const newData = rows.map(([address, amount, payout], index) => ({
+      const newData = rows.map(([address, amount, commitment, payout], index) => ({
         id: index.toString(),
         address,
         amount: Number(amount),
+        commitment: commitment,
         payout: Number(payout),
       }));
       setData((prev) => [...prev, ...newData]);
@@ -493,7 +494,7 @@ export default function Home() {
             </>}
 
             {sourceCategory && <>
-              <Label className="mt-4 mb-1">Token holders for aidrdop</Label>
+              <Label className="mt-4 mb-1">Token holders for airdrdop</Label>
               <TokenDropdown categories={categories?.filter(category => category !== BCHCategory)} balancesByToken={balancesByToken} onSelect={onTargetCategoryChange} allowCustom />
             </>}
 
