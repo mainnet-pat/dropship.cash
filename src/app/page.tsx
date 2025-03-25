@@ -339,7 +339,7 @@ export default function Home() {
       }
     });
 
-    const MaxPayoutsInTx = 1;
+    const MaxPayoutsInTx = 1000;
     const chunks = chunkArrayInGroups(sendRequests, MaxPayoutsInTx);
 
     for (const [index, chunk] of chunks.entries()) {
@@ -352,12 +352,13 @@ export default function Home() {
       const encodedTransaction = hexToBin(unsignedTransaction!);
       const decoded = decodeTransaction(encodedTransaction);
       setShowFinishTransactionModal(true);
-      setFinishTransactionMessage(chunks.length > 1 ? `Sign transaction ${index+1}/${chunks.length} to airdrop tokens` : `Sign transaction to airdrop tokens`);
+      const assets = sourceCategory === BCHCategory ? "BCH" : "tokens";
+      setFinishTransactionMessage(chunks.length > 1 ? `Sign transaction ${index+1}/${chunks.length} to airdrop ${assets}` : `Sign transaction to airdrop ${assets}`);
       const signResult = await signTransaction({
         transaction: decoded,
         sourceOutputs: sourceOutputs!,
         broadcast: false,
-        userPrompt: chunks.length > 1 ? `Sign transaction ${index+1}/${chunks.length} to airdrop tokens` : `Sign transaction to airdrop tokens`
+        userPrompt: chunks.length > 1 ? `Sign transaction ${index+1}/${chunks.length} to airdrop ${assets}` : `Sign transaction to airdrop ${assets}`
       });
       setFinishTransactionMessage("");
       setShowFinishTransactionModal(false);
@@ -369,7 +370,7 @@ export default function Home() {
 
       try {
         const response = await wallet.submitTransaction(hexToBin(signResult.signedTransaction), true);
-        toast.success(`Successfully airdropped tokens. TxId: ${response}`, { duration: 10000 });
+        toast.success(`Successfully airdropped ${assets}. TxId: ${response}`, { duration: 10000 });
       } catch (e) {
         toast.error((e as any).message || e, { duration: 10000 });
         return;

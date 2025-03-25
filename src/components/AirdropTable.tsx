@@ -132,6 +132,10 @@ export const columns: ColumnDef<Payment>[] = [
       const initialValue = row.getValue<number>("payout")
       const [value, setValue] = React.useState<string>(initialValue.toLocaleString('en-US', { minimumFractionDigits: (table.options.meta as any)?.sourceCategoryDecimals }));
 
+      React.useEffect(() => {
+        setValue(initialValue.toLocaleString('en-US', { minimumFractionDigits: (table.options.meta as any)?.sourceCategoryDecimals }));
+      }, [initialValue]);
+
       const onBlur = React.useCallback((e: React.FocusEvent<HTMLInputElement>) => {
         const parsed = Number(parseFloat(value.replaceAll(',', '')).toFixed((table.options.meta as any)?.sourceCategoryDecimals));
         setValue(parsed.toLocaleString('en-US', { minimumFractionDigits: (table.options.meta as any)?.sourceCategoryDecimals }));
