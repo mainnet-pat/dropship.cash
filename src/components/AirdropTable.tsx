@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/table"
 import { getTokenDecimals, getTokenImage, getTokenLabel, getTokenName, MaxPayoutsInTx } from "@/lib/utils"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card"
+import { Checkbox } from "./ui/checkbox"
+import { toTokenaddr } from "mainnet-js"
 
 export const defaultData: Payment[] = [
   // {
@@ -59,10 +61,13 @@ export const columns: ColumnDef<Payment>[] = [
         </Button>
       )
     },
-    cell: ({ row }) => <div className="lowercase font-mono overflow-hidden text-xs md:text-sm flex flex-row w-[125px] md:w-[240px] lg:w-auto">
-      <div className="hidden lg:block">{row.getValue<string>("address").split(":")[0]}:</div>
-      <div>{row.getValue<string>("address").split(":")[1]}</div>
-    </div>,
+    cell: ({ row, table }) => {
+      const address = (table.options.meta as any)?.showTokenAddrs ? toTokenaddr(row.getValue<string>("address")) : row.getValue<string>("address");
+      return <div className="lowercase font-mono overflow-hidden text-xs md:text-sm flex flex-row w-[125px] md:w-[240px] lg:w-auto">
+        <div className="hidden lg:block">{address.split(":")[0]}:</div>
+        <div>{address.split(":")[1]}</div>
+      </div>
+    },
   },
   {
     accessorKey: "amount",
@@ -169,6 +174,7 @@ export const columns: ColumnDef<Payment>[] = [
 ]
 
 export function AirdropTable({data, setData, sourceCategory, targetCategory, onRecalcPayoutClick} : {data: Payment[], setData: React.Dispatch<React.SetStateAction<Payment[]>>, sourceCategory?: string, targetCategory?: string, onRecalcPayoutClick: () => void}) {
+  const [showTokenAddrs, setShowTokenAddrs] = React.useState(true);
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -221,6 +227,7 @@ export function AirdropTable({data, setData, sourceCategory, targetCategory, onR
       targetCategoryTicker: getTokenLabel(targetCategory!),
       sourceCategoryDecimals: getTokenDecimals(sourceCategory!),
       targetCategoryDecimals: getTokenDecimals(targetCategory!),
+      showTokenAddrs: showTokenAddrs,
     },
   });
 
@@ -245,8 +252,19 @@ export function AirdropTable({data, setData, sourceCategory, targetCategory, onR
         </div>
       </div>
       <div className="flex text-sm gap-2 pt-4 pb-2 items-center">
-        <div>Total recipients: {recipients.length}</div>
-        <div>Transactions needed: {Math.ceil(recipients.length / MaxPayoutsInTx)}</div>
+        <div className="grow">
+          <div className="flex items-center space-x-2 mt-2">
+            <Checkbox id="showTokenAddrs" checked={showTokenAddrs} onClick={() => setShowTokenAddrs(!showTokenAddrs)} />
+            <label
+              htmlFor="showTokenAddrs"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Show token-aware addresses
+            </label>
+          </div>
+        </div>
+        <div className="flex-none">Total recipients: {recipients.length}</div>
+        <div className="flex-none">Transactions needed: {Math.ceil(recipients.length / MaxPayoutsInTx)}</div>
       </div>
       <div className="rounded-md border">
         <Table>

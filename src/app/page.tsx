@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BCMR, SendRequest, TestNetWallet, TokenSendRequest, Wallet } from "mainnet-js";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FileDown, FileUp, Github, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -87,30 +87,33 @@ export default function Home() {
 
     if (amount < 0) {
       setBudget("0");
-      return;
     }
 
     if (amount > balancesByToken[sourceCategory]) {
       setBudget(String((balancesByToken[sourceCategory] / 10**decimals).toFixed(decimals)));
-      return;
     }
-  }, [sourceCategory, balancesByToken]);
+
+    const recalced = recalcPayoutsInternal(event.target.value, data, strategy, sourceCategory);
+    validateData(recalced, event.target.value);
+    setData(recalced);
+  }, [sourceCategory, balancesByToken, data, strategy]);
 
   const onSourceCategoryChange = useCallback((value: string) => {
     setBudget("0");
     setSourceCategory(value);
   }, []);
 
-  const validateData = useCallback((data: Payment[]) => {
+  const validateData = (data: Payment[], budget: string) => {
+    setFullValidationError("");
     const available = parseFloat(budget);
     const currentTotal = data.reduce((acc, payment) => acc + payment.payout, 0);
     if (currentTotal > available) {
       setFullValidationError("Total amount exceeds budget");
     }
     return data;
-  }, [budget]);
+  };
 
-  const recalcPayouts = useCallback(() => {
+  const recalcPayoutsInternal = (budget: string, data: Payment[], strategy: string, sourceCategory: string | undefined) => {
     const decimals = getTokenDecimals(sourceCategory!);
 
     if (strategy === "Even") {
@@ -167,13 +170,13 @@ export default function Home() {
     }
 
     return data;
-  }, [budget, data, strategy, sourceCategory]);
+  };
 
   const onTargetCategoryChange = useCallback((value: string) => {
     setTargetCategory(value);
-    const recalced = recalcPayouts();
-    validateData(recalced);
-  }, [recalcPayouts, validateData]);
+    const recalced = recalcPayoutsInternal(budget, data, strategy, sourceCategory);
+    validateData(recalced, budget);
+  }, [budget, data, strategy, sourceCategory]);
 
   const onMaxClick = useCallback(() => {
     if (!sourceCategory) {
@@ -234,12 +237,12 @@ export default function Home() {
 
     if (typeof value === "function") {
       setData((prev) => {
-        return validateData(value(prev));
+        return validateData(value(prev), budget);
       });
     } else {
-      setData(validateData(value));
+      setData(validateData(value, budget));
     }
-  }, [validateData]);
+  }, [validateData, budget]);
 
   const onLoadFtHoldersFromChaingraphClick = useCallback(async () => {
     if (!targetCategory) {
@@ -259,7 +262,7 @@ export default function Home() {
       const newData = tokenHolders
         .map((holder, index) => ({ id: (data.length + index).toString(), amount: Number((holder.amount / decimalsFactor).toFixed(decimals)), commitment: holder.commitment, payout: 0, address: holder.address }))
         .filter((payment) => {
-          if (data.find((existing) => existing.address === payment.address && existing.amount === payment.amount && existing.commitment === payment.commitment)) {
+          if (data.find((existing) => existing.address === payment.address)) {
             return false;
           }
           return true;
@@ -287,7 +290,7 @@ export default function Home() {
       const newData = tokenHolders
         .map((holder, index) => ({ id: (data.length + index).toString(), amount: holder.amount, commitment: holder.commitment, payout: 0, address: holder.address }))
         .filter((payment) => {
-          if (data.find((existing) => existing.address === payment.address && existing.amount === payment.amount && existing.commitment === payment.commitment)) {
+          if (data.find((existing) => existing.address === payment.address)) {
             return false;
           }
           return true;
@@ -302,14 +305,14 @@ export default function Home() {
 
   const onStrategyChange = useCallback((value: string) => {
     setStrategy(value);
-    const recalced = recalcPayouts();
-    validateData(recalced);
-  }, [recalcPayouts, validateData]);
+    const recalced = recalcPayoutsInternal(budget, data, value, sourceCategory);
+    validateData(recalced, budget);
+  }, [budget, data, sourceCategory]);
 
   const onRecalcPayoutClick = useCallback(() => {
-    const recalced = recalcPayouts();
-    validateData(recalced);
-  }, [recalcPayouts, validateData]);
+    const recalced = recalcPayoutsInternal(budget, data, strategy, sourceCategory);
+    validateData(recalced, budget);
+  }, [budget, data, strategy, sourceCategory]);
 
   const onStartAirdropClick = useCallback(async() => {
     if (fullValidationError) {
