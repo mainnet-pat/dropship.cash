@@ -316,9 +316,10 @@ export default function Home() {
 
   const onStartAirdropClick = useCallback(async() => {
     if (fullValidationError) {
-      console.log(1);
       return;
     }
+
+    const decimalsFactor = 10**getTokenDecimals(sourceCategory!)
 
     const sendRequests: (SendRequest | TokenSendRequest)[] = [];
     data.forEach((payment) => {
@@ -337,7 +338,7 @@ export default function Home() {
           cashaddr: payment.address,
           value: 1000,
           tokenId: sourceCategory!,
-          amount: payment.payout,
+          amount: Math.floor(payment.payout * decimalsFactor),
         }));
       }
     });
