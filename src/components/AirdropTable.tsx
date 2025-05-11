@@ -78,14 +78,13 @@ export const columns: ColumnDef<Payment>[] = [
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            <span className="hidden md:block"># FT/NFT</span>
-            {(table.options.meta as any)?.targetCategoryTicker}
+            <span className="hidden md:block">Weight / <br /> # (N)FT {(table.options.meta as any)?.targetCategoryTicker}</span>
             <ArrowUpDown />
           </Button>
         </div>
       )
     },
-    cell: ({ row, table }) => <div className="text-right font-medium font-mono text-xs md:text-sm">{row.getValue<number>("amount").toLocaleString('en-US', { minimumFractionDigits: (table.options.meta as any)?.targetCategoryDecimals }) || ""}</div>,
+    cell: ({ row, table }) => <div className="text-right font-medium font-mono text-xs md:text-sm">{row.getValue<number>("amount").toLocaleString('en-US', { minimumFractionDigits: (table.options.meta as any).targetCategory ? (table.options.meta as any)?.targetCategoryDecimals : 8 }) || ""}</div>,
   },
   {
     accessorKey: "commitment",

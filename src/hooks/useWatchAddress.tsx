@@ -2,7 +2,7 @@ import { getFulcrum, isChipnet } from "@/lib/utils";
 import { DefaultProvider, ElectrumNetworkProvider, TestNetWallet, UtxoI, Wallet } from "mainnet-js";
 import { useState, useEffect } from "react";
 
-const WalletClass = isChipnet ? TestNetWallet : Wallet;
+export const WalletClass = isChipnet ? TestNetWallet : Wallet;
 const fulcrum = getFulcrum();
 DefaultProvider.servers[isChipnet ? "testnet" : "mainnet"] = [`wss://${fulcrum}`];
 

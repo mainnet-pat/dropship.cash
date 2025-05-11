@@ -211,6 +211,10 @@ export const addMissingBCMRsInternal = async (categories: string[]) => {
 
 
 export const getTokenLabel = (tokenId: string) => {
+  if (!tokenId) {
+    return tokenId;
+  }
+
   const bcmr = BCMR.getTokenInfo(tokenId);
   let label = bcmr?.token?.symbol;
   if (!label) {
@@ -226,6 +230,10 @@ export const getTokenDecimals = (tokenId: string) => {
 }
 
 export const getTokenName = (tokenId: string, commitment?: string) => {
+  if (!tokenId) {
+    return tokenId;
+  }
+
   const bcmr = BCMR.getTokenInfo(tokenId);
   let label = bcmr?.token?.nfts?.parse?.types?.[commitment ?? ""]?.name || bcmr?.name
   if (!label) {

@@ -7,16 +7,16 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useConnectorContext } from "@/contexts/ConnectorContext";
-import { useWatchAddress } from "@/hooks/useWatchAddress";
+import { useWatchAddress, WalletClass } from "@/hooks/useWatchAddress";
 import { addMissingBCMRs, BCHBcmr, BCHCategory, chunkArrayInGroups, fetchFtTokenHolders, fetchNftTokenHolders, getTokenDecimals, getTokenImage, getTokenLabel, getTokenName, isChipnet } from "@/lib/utils";
 import { ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, useState } from "react";
-import { decodeCashAddress, decodeTransaction, hexToBin } from "@bitauth/libauth";
+import { decodeCashAddress, decodeTransaction, hexToBin, isHex } from "@bitauth/libauth";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BCMR, SendRequest, TestNetWallet, TokenSendRequest, Wallet } from "mainnet-js";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileDown, FileUp, Github, LoaderCircle } from "lucide-react";
+import { BanknoteArrowDown, FileDown, FileUp, Github, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -42,6 +42,10 @@ export default function Home() {
   const [showDonationDialog, setShowDonationDialog] = useState<boolean>(false);
   const [finishTransactionMessage, setFinishTransactionMessage] = useState<string>("");
   const [chaingraphLoading, setChainGraphLoading] = useState<boolean>(false);
+  const [showTransactionLoadDialog, setShowTransactionLoadDialog] = useState<boolean>(false);
+  const [transactionLoading, setTransactionLoading] = useState<boolean>(false);
+  const [transactionId, setTransactionId] = useState<string>("");
+  const [transactionIdValidationError, setTransactionIdValidationError] = useState<string>("");
 
   useEffect(() => {
     (async () => {
@@ -54,7 +58,7 @@ export default function Home() {
           acc[category] = utxos.filter((utxo) => utxo.token?.tokenId === category).reduce((acc, utxo) => acc + Number(utxo.token?.amount), 0);
           return acc;
         }, {} as Record<string, number>);
-        balances[BCHCategory] = utxos.reduce((acc, utxo) => acc + (utxo.token === undefined ? Number(utxo.satoshis) : 0), 0) - 10000; // BCH
+        balances[BCHCategory] = Math.max(0, utxos.reduce((acc, utxo) => acc + (utxo.token === undefined ? Number(utxo.satoshis) : 0), 0) - 10000); // BCH
         setBalancesByToken(balances);
       }
     })();
@@ -349,9 +353,16 @@ export default function Home() {
     for (const [index, chunk] of chunks.entries()) {
       const WalletType = isChipnet ? TestNetWallet : Wallet;
       const wallet = await WalletType.watchOnly(connectedAddress!);
-      const { unsignedTransaction, sourceOutputs } = await wallet.send(chunk, {
-        buildUnsigned: true,
-      });
+
+      let { unsignedTransaction, sourceOutputs }: Awaited<ReturnType<typeof wallet["send"]>> = {};
+      try {
+        ({ unsignedTransaction, sourceOutputs } = await wallet.send(chunk, {
+          buildUnsigned: true,
+        }));
+      } catch {
+        toast.error("Error building transaction: insufficient funds.", { duration: 10000 });
+        return;
+      }
 
       const encodedTransaction = hexToBin(unsignedTransaction!);
       const decoded = decodeTransaction(encodedTransaction);
@@ -381,6 +392,56 @@ export default function Home() {
       }
     }
   }, [fullValidationError, connectedAddress, data, signTransaction, sourceCategory]);
+
+  const onTransactionIdChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setTransactionId(event.target.value);
+
+    if (event.target.value.length !== 64 || isHex(event.target.value) === false) {
+      setTransactionIdValidationError("Invalid transaction Id");
+      return;
+    }
+
+    setTransactionIdValidationError("");
+  }, []);
+
+  const onTransactionLoadButtonClick = useCallback(async () => {
+    setTransactionLoading(true);
+
+    const wallet = await WalletClass.watchOnly(connectedAddress!);
+    const tx = await wallet.provider!.getRawTransactionObject(transactionId, true);
+    setTransactionId("");
+
+    try {
+      let holderInfo = tx.vin.map(vin => ({
+        address: vin.address!,
+        amount: vin.value! * 1e8,
+        commitment: "",
+      }))
+
+      if (!includeContracts) {
+        holderInfo = holderInfo.filter((holder) => holder.address.includes(":p") === false);
+      }
+
+      const decimals = getTokenDecimals(BCHCategory);
+      const decimalsFactor = 10**decimals;
+
+      const newData = holderInfo
+        .map((holder, index) => ({ id: (data.length + index).toString(), amount: Number((holder.amount / decimalsFactor).toFixed(decimals)), commitment: holder.commitment, payout: 0, address: holder.address }))
+        .filter((payment) => {
+          if (data.find((existing) => existing.address === payment.address)) {
+            return false;
+          }
+          return true;
+        });
+
+      setData((prev) => [...prev, ...newData]);
+      setTransactionLoading(false);
+      setShowTransactionLoadDialog(false);
+    } catch (e) {
+      toast.error("Error fetching token holders", { duration: 10000 });
+    }
+
+  }, [includeContracts, transactionId, data]);
 
   const exportToCsv = useCallback(() => {
     const csv = data.map(row => `${row.address},${row.amount},${row.commitment},${row.payout}`).join("\n");
@@ -503,18 +564,27 @@ export default function Home() {
               <TokenDropdown categories={categories?.filter(category => category !== BCHCategory)} balancesByToken={balancesByToken} onSelect={onTargetCategoryChange} allowCustom />
             </>}
 
-            {targetCategory && <>
+            {sourceCategory && <>
               <Card className="py-4 mt-4">
                 <CardContent className="px-3">
-                  <div className="flex items-center space-x-2">
-                    <Button onClick={() => onLoadFtHoldersFromChaingraphClick()} disabled={chaingraphLoading}>
-                      Get FT holders
-                    </Button>
+                  {targetCategory && <>
+                    <div className="mb-2">
+                      <div className="flex items-center space-x-2">
+                        <Button onClick={() => onLoadFtHoldersFromChaingraphClick()} disabled={chaingraphLoading}>
+                          Get FT holders
+                        </Button>
 
-                    <Button onClick={() => onLoadNftHoldersFromChaingraphClick()} disabled={chaingraphLoading}>
-                      Get NFT holders
-                    </Button>
-                  </div>
+                        <Button onClick={() => onLoadNftHoldersFromChaingraphClick()} disabled={chaingraphLoading}>
+                          Get NFT holders
+                        </Button>
+                      </div>
+                    </div>
+                  </>}
+
+
+                  <Button className="w-full" title="Load TX inputs" onClick={() => setShowTransactionLoadDialog(true)}>
+                    <BanknoteArrowDown /> Load TX inputs
+                  </Button>
 
                   <div className="flex items-center space-x-2 mt-2">
                     <Checkbox id="includeContracts" onChange={() => setIncludeContracts(!includeContracts)} />
@@ -547,10 +617,20 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>}
-      {connectedAddress && targetCategory &&
+      {connectedAddress && sourceCategory &&
         <div className="mx-2 md:mx-10 mt-3">
           <hr />
+
           <div className="flex flex-row gap-2 mt-3">
+            <Button title="Import From CSV" variant="outline" onClick={() => importFromCsv()}>
+              <FileDown /> Import From CSV
+            </Button>
+            {data.length > 0 && <Button title="Export To CSV" variant="outline" onClick={() => exportToCsv()}>
+              <FileUp /> Export To CSV
+            </Button>}
+          </div>
+
+          <div className="flex flex-row gap-2 mt-3 mb-3">
             <div className="flex flex-col">
               <Input
                 className="font-medium text-sm"
@@ -572,15 +652,6 @@ export default function Home() {
             <Button onClick={() => onAddButtonClick()} disabled={addressValidationError.length > 0 || payoutValidationError.length > 0 || inputAddress.length === 0 || inputPayout.length === 0}>
               Add Fixed Amount Payout
             </Button>
-          </div>
-
-          <div className="flex flex-row gap-2 mt-4">
-            <Button title="Import From CSV" variant="outline" onClick={() => importFromCsv()}>
-              <FileDown /> Import From CSV
-            </Button>
-            {data.length > 0 && <Button title="Export To CSV" variant="outline" onClick={() => exportToCsv()}>
-              <FileUp /> Export To CSV
-            </Button>}
           </div>
 
           {data.length > 0 &&
@@ -629,6 +700,38 @@ export default function Home() {
             </div>
             <div className="text-center overflow-hidden text-ellipsis">pat#111222; 🎀</div>
             <div className="text-center overflow-hidden text-ellipsis">bitcoincash:qqsxjha225lmnuedy6hzlgpwqn0fd77dfq73p60wwp</div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showTransactionLoadDialog} onOpenChange={(open) => setShowTransactionLoadDialog(open)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Load transaction</DialogTitle>
+              <DialogDescription>
+                <span className="text-xl">
+                  Paste the transaction Id here
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex flex-col gap-2 mt-3 mb-3">
+              <div className="flex flex-col w-full">
+                <Input
+                  className="font-medium text-sm"
+                  value={transactionId}
+                  onChange={onTransactionIdChange}
+                  placeholder="Transaction Id"
+                />
+                {transactionIdValidationError && <div className="text-red-400">{transactionIdValidationError}</div>}
+              </div>
+              <Button onClick={() => onTransactionLoadButtonClick()} disabled={transactionLoading || transactionId.length === 0 || transactionIdValidationError.length > 0}>
+                Load transaction
+              </Button>
+            </div>
+
+            {transactionLoading && <div className="flex justify-center animate-spin">
+              <LoaderCircle size={72} />
+            </div>}
           </DialogContent>
         </Dialog>
 
