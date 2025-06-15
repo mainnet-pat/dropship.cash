@@ -13,7 +13,7 @@ import { ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, useState
 import { decodeCashAddress, decodeTransaction, hexToBin, isHex } from "@bitauth/libauth";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BCMR, SendRequest, TestNetWallet, TokenSendRequest, Wallet } from "mainnet-js";
+import { BCMR, OpReturnData, SendRequest, TestNetWallet, TokenSendRequest, Wallet } from "mainnet-js";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BanknoteArrowDown, FileDown, FileUp, Github, LoaderCircle } from "lucide-react";
@@ -325,7 +325,7 @@ export default function Home() {
 
     const decimalsFactor = 10**getTokenDecimals(sourceCategory!)
 
-    const sendRequests: (SendRequest | TokenSendRequest)[] = [];
+    const sendRequests: (SendRequest | TokenSendRequest | OpReturnData)[] = [];
     data.forEach((payment) => {
       if (payment.payout === 0) {
         return;
@@ -353,6 +353,8 @@ export default function Home() {
     for (const [index, chunk] of chunks.entries()) {
       const WalletType = isChipnet ? TestNetWallet : Wallet;
       const wallet = await WalletType.watchOnly(connectedAddress!);
+
+      chunk.unshift(OpReturnData.fromString("DROP"));
 
       let { unsignedTransaction, sourceOutputs }: Awaited<ReturnType<typeof wallet["send"]>> = {};
       try {
