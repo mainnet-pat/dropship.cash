@@ -77,6 +77,7 @@ export default function Home() {
     setConnectedAddress(undefined);
     setCategories(undefined);
     await disconnect();
+    window.location.reload();
   }, [disconnect]);
 
   const validateData = useCallback((data: Payment[], budget: string) => {
