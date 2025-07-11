@@ -79,6 +79,16 @@ export default function Home() {
     await disconnect();
   }, [disconnect]);
 
+  const validateData = useCallback((data: Payment[], budget: string) => {
+    setFullValidationError("");
+    const available = parseFloat(budget);
+    const currentTotal = data.reduce((acc, payment) => acc + payment.payout, 0);
+    if (currentTotal > available) {
+      setFullValidationError("Total amount exceeds budget");
+    }
+    return data;
+  }, []);
+
   const onBudgetValueChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setBudget(event.target.value);
 
@@ -100,22 +110,12 @@ export default function Home() {
     const recalced = recalcPayoutsInternal(event.target.value, data, strategy, sourceCategory);
     validateData(recalced, event.target.value);
     setData(recalced);
-  }, [sourceCategory, balancesByToken, data, strategy]);
+  }, [sourceCategory, balancesByToken, data, strategy, validateData]);
 
   const onSourceCategoryChange = useCallback((value: string) => {
     setBudget("0");
     setSourceCategory(value);
   }, []);
-
-  const validateData = (data: Payment[], budget: string) => {
-    setFullValidationError("");
-    const available = parseFloat(budget);
-    const currentTotal = data.reduce((acc, payment) => acc + payment.payout, 0);
-    if (currentTotal > available) {
-      setFullValidationError("Total amount exceeds budget");
-    }
-    return data;
-  };
 
   const recalcPayoutsInternal = (budget: string, data: Payment[], strategy: string, sourceCategory: string | undefined) => {
     const decimals = getTokenDecimals(sourceCategory!);
@@ -180,7 +180,7 @@ export default function Home() {
     setTargetCategory(value);
     const recalced = recalcPayoutsInternal(budget, data, strategy, sourceCategory);
     validateData(recalced, budget);
-  }, [budget, data, strategy, sourceCategory]);
+  }, [budget, data, strategy, sourceCategory, validateData]);
 
   const onMaxClick = useCallback(() => {
     if (!sourceCategory) {
@@ -273,7 +273,7 @@ export default function Home() {
         });
 
       setData((prev) => [...prev, ...newData]);
-    } catch (e) {
+    } catch {
       toast.error("Error fetching token holders", { duration: 10000 });
     }
     setChainGraphLoading(false);
@@ -311,12 +311,12 @@ export default function Home() {
     setStrategy(value);
     const recalced = recalcPayoutsInternal(budget, data, value, sourceCategory);
     validateData(recalced, budget);
-  }, [budget, data, sourceCategory]);
+  }, [budget, data, sourceCategory, validateData]);
 
   const onRecalcPayoutClick = useCallback(() => {
     const recalced = recalcPayoutsInternal(budget, data, strategy, sourceCategory);
     validateData(recalced, budget);
-  }, [budget, data, strategy, sourceCategory]);
+  }, [budget, data, strategy, sourceCategory, validateData]);
 
   const onStartAirdropClick = useCallback(async() => {
     if (fullValidationError) {
@@ -388,8 +388,8 @@ export default function Home() {
       try {
         const response = await wallet.submitTransaction(hexToBin(signResult.signedTransaction), true);
         toast.success(`Successfully airdropped ${assets}. TxId: ${response}`, { duration: 10000 });
-      } catch (e) {
-        toast.error((e as any).message || e, { duration: 10000 });
+      } catch (e: any) {
+        toast.error(e.message || e, { duration: 10000 });
         return;
       }
     }
@@ -439,11 +439,11 @@ export default function Home() {
       setData((prev) => [...prev, ...newData]);
       setTransactionLoading(false);
       setShowTransactionLoadDialog(false);
-    } catch (e) {
+    } catch {
       toast.error("Error fetching token holders", { duration: 10000 });
     }
 
-  }, [includeContracts, transactionId, data]);
+  }, [includeContracts, transactionId, data, connectedAddress]);
 
   const exportToCsv = useCallback(() => {
     const csv = data.map(row => `${row.address},${row.amount},${row.commitment},${row.payout}`).join("\n");
@@ -589,7 +589,7 @@ export default function Home() {
                   </Button>
 
                   <div className="flex items-center space-x-2 mt-2">
-                    <Checkbox id="includeContracts" onChange={() => setIncludeContracts(!includeContracts)} />
+                    <Checkbox id="includeContracts" onClick={() => setIncludeContracts(!includeContracts)} />
                     <label
                       htmlFor="includeContracts"
                       className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
