@@ -1,10 +1,40 @@
-import { lockingBytecodeToCashAddress, Transaction } from "@bitauth/libauth";
+import { encodeCashAddress, lockingBytecodeToCashAddress, sha256, Transaction } from "@bitauth/libauth";
 import { clsx, type ClassValue } from "clsx"
-import { BCMR, AuthChainElement, hexToBin, Registry } from "mainnet-js";
+import { BCMR, AuthChainElement, hexToBin, Registry, toCashaddr } from "mainnet-js";
 import { twMerge } from "tailwind-merge"
 // @ts-ignore
 import { default as blockies } from "blockies";
 import { Metadata } from "next";
+
+export type ActivePoolEntry = {
+  pool_addr: string;
+  pool_tokenaddr: string;
+  owner_p2pkh_addr: string;
+  owner_p2pkh_tokenaddr: string;
+  owner_pkh: string;
+  sats: number;
+  token_id: string;
+  tokens: number;
+  tx_pos: number;
+  txid: string;
+};
+export type ActivePoolsResult = {
+  active: Array<ActivePoolEntry>;
+};
+
+export const getCauldronPools = async (tokenId: string) => {
+  const indexedPoolsResponse = await fetch(`https://indexer.cauldron.quest/cauldron/pool/active/?token=${tokenId}`);
+  const pools = (await indexedPoolsResponse.json() as ActivePoolsResult).active;
+
+  pools.forEach((pool) => {
+    pool.owner_p2pkh_tokenaddr = pool.owner_p2pkh_addr;
+    pool.owner_p2pkh_addr = toCashaddr(pool.owner_p2pkh_addr);
+
+    pool.pool_addr = encodeCashAddress("bitcoincash", "p2sh", sha256.hash(sha256.hash(hexToBin(`746376a914${pool.owner_pkh}88ac67c0d1c0ce88c25288c0cdc0c788c0c6c0d095c0c6c0cc9490539502e80396c0cc7c94c0d3957ca268`))));
+  });
+
+  return pools;
+}
 
 export const metadata: Metadata = {
   title: "Dropship.Cash",

@@ -1,0 +1,231 @@
+diff --git a/node_modules/mainnet-js/dist/module/util/deriveCashaddr.d.ts.map b/node_modules/mainnet-js/dist/module/util/deriveCashaddr.d.ts.map
+index 4f9c0e4..10667cc 100644
+--- a/node_modules/mainnet-js/dist/module/util/deriveCashaddr.d.ts.map
++++ b/node_modules/mainnet-js/dist/module/util/deriveCashaddr.d.ts.map
+@@ -1 +1 @@
+-{"version":3,"file":"deriveCashaddr.d.ts","sourceRoot":"","sources":["../../../src/util/deriveCashaddr.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,wBAAwB,EAWzB,MAAM,kBAAkB,CAAC;AAI1B,wBAAgB,cAAc,CAAC,QAAQ,EAAE,MAAM,GAAG,OAAO,CAOxD;AAED,wBAAgB,cAAc,CAC5B,UAAU,EAAE,UAAU,EACtB,aAAa,EAAE,wBAAwB,GACtC,MAAM,CAWR;AAED,wBAAgB,eAAe,CAC7B,GAAG,EAAE,UAAU,EACf,aAAa,EAAE,wBAAwB,GACtC,MAAM,CA+BR;AAED,wBAAgB,UAAU,CAAC,SAAS,EAAE,MAAM,GAAG,MAAM,CAsBpD;AAED,wBAAgB,WAAW,CAAC,QAAQ,EAAE,MAAM,GAAG,MAAM,CAsBpD;AAED,wBAAgB,WAAW,CAAC,OAAO,EAAE,MAAM,GAAG,OAAO,CA+BpD;AAED,wBAAgB,cAAc,CAAC,QAAQ,EAAE,MAAM,EAAE,OAAO,EAAE,OAAO,QAIhE"}
+\ No newline at end of file
++{"version":3,"file":"deriveCashaddr.d.ts","sourceRoot":"","sources":["../../../src/util/deriveCashaddr.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,wBAAwB,EAOzB,MAAM,kBAAkB,CAAC;AAI1B,wBAAgB,cAAc,CAAC,QAAQ,EAAE,MAAM,GAAG,OAAO,CAOxD;AAED,wBAAgB,cAAc,CAC5B,UAAU,EAAE,UAAU,EACtB,aAAa,EAAE,wBAAwB,GACtC,MAAM,CAWR;AAED,wBAAgB,eAAe,CAC7B,GAAG,EAAE,UAAU,EACf,aAAa,EAAE,wBAAwB,GACtC,MAAM,CA+BR;AAED,wBAAgB,UAAU,CAAC,SAAS,EAAE,MAAM,GAAG,MAAM,CAqBpD;AAED,wBAAgB,WAAW,CAAC,QAAQ,EAAE,MAAM,GAAG,MAAM,CAqBpD;AAED,wBAAgB,WAAW,CAAC,OAAO,EAAE,MAAM,GAAG,OAAO,CAiBpD;AAED,wBAAgB,cAAc,CAAC,QAAQ,EAAE,MAAM,EAAE,OAAO,EAAE,OAAO,QAIhE"}
+\ No newline at end of file
+diff --git a/node_modules/mainnet-js/dist/module/util/deriveCashaddr.js b/node_modules/mainnet-js/dist/module/util/deriveCashaddr.js
+index e4ae498..e8fbebc 100644
+--- a/node_modules/mainnet-js/dist/module/util/deriveCashaddr.js
++++ b/node_modules/mainnet-js/dist/module/util/deriveCashaddr.js
+@@ -1,4 +1,4 @@
+-import { encodeCashAddress, CashAddressType, secp256k1, decodeCashAddressFormat, decodeCashAddressFormatWithoutPrefix, decodeCashAddress, cashAddressTypeBitsToType, decodeCashAddressVersionByte, } from "@bitauth/libauth";
++import { encodeCashAddress, CashAddressType, secp256k1, decodeCashAddressFormatWithoutPrefix, decodeCashAddress, } from "@bitauth/libauth";
+ import { hash160 } from "./hash160.js";
+ export function isValidAddress(cashaddr) {
+     const result = decodeCashAddress(cashaddr);
+@@ -58,17 +58,20 @@ export function toCashaddr(tokenaddr) {
+     let result;
+     // If the address has a prefix decode it as is
+     if (tokenaddr.includes(":")) {
+-        result = decodeCashAddressFormat(tokenaddr);
++        result = decodeCashAddress(tokenaddr);
+     }
+     // otherwise, derive the network from the tokenaddr without prefix
+     else {
+-        result = decodeCashAddressFormatWithoutPrefix(tokenaddr);
++        const resultWithoutPrefix = decodeCashAddressFormatWithoutPrefix(tokenaddr);
++        if (typeof resultWithoutPrefix === "string")
++            throw new Error(resultWithoutPrefix);
++        result = decodeCashAddress(`${resultWithoutPrefix.prefix}:${tokenaddr}`);
+     }
+     if (typeof result === "string")
+         throw new Error(result);
+     return encodeCashAddress({
+         prefix: result.prefix,
+-        type: CashAddressType.p2pkh,
++        type: result.type.replace("WithTokens", ""),
+         payload: result.payload,
+     }).address;
+ }
+@@ -76,17 +79,20 @@ export function toTokenaddr(cashaddr) {
+     let result;
+     // If the address has a prefix decode it as is
+     if (cashaddr.includes(":")) {
+-        result = decodeCashAddressFormat(cashaddr);
++        result = decodeCashAddress(cashaddr);
+     }
+     // otherwise, derive the network from the cashaddr without prefix
+     else {
+-        result = decodeCashAddressFormatWithoutPrefix(cashaddr);
++        const resultWithoutPrefix = decodeCashAddressFormatWithoutPrefix(cashaddr);
++        if (typeof resultWithoutPrefix === "string")
++            throw new Error(resultWithoutPrefix);
++        result = decodeCashAddress(`${resultWithoutPrefix.prefix}:${cashaddr}`);
+     }
+     if (typeof result === "string")
+         throw new Error(result);
+     return encodeCashAddress({
+         prefix: result.prefix,
+-        type: CashAddressType.p2pkhWithTokens,
++        type: result.type.replace("WithTokens", "") + "WithTokens",
+         payload: result.payload,
+     }).address;
+ }
+@@ -94,22 +100,18 @@ export function isTokenaddr(address) {
+     let result;
+     // If the address has a prefix decode it as is
+     if (address.includes(":")) {
+-        result = decodeCashAddressFormat(address);
++        result = decodeCashAddress(address);
+     }
++    // otherwise, derive the network from the address without prefix
+     else {
+-        // otherwise, derive the network from the address without prefix
+-        result = decodeCashAddressFormatWithoutPrefix(address);
++        const resultWithoutPrefix = decodeCashAddressFormatWithoutPrefix(address);
++        if (typeof resultWithoutPrefix === "string")
++            throw new Error(resultWithoutPrefix);
++        result = decodeCashAddress(`${resultWithoutPrefix.prefix}:${address}`);
+     }
+     if (typeof result === "string")
+         throw new Error(result);
+-    const info = decodeCashAddressVersionByte(result.version);
+-    if (typeof info === "string")
+-        throw new Error(info);
+-    const type = cashAddressTypeBitsToType[info.typeBits];
+-    if (type === undefined) {
+-        throw Error("Wrong cashaddress type");
+-    }
+-    return ([CashAddressType.p2pkhWithTokens, CashAddressType.p2shWithTokens].indexOf(type) !== -1);
++    return result.type.endsWith("WithTokens");
+ }
+ export function checkTokenaddr(cashaddr, enforce) {
+     if (enforce && !isTokenaddr(cashaddr)) {
+diff --git a/node_modules/mainnet-js/dist/module/util/deriveCashaddr.js.map b/node_modules/mainnet-js/dist/module/util/deriveCashaddr.js.map
+index 7b82449..71adc63 100644
+--- a/node_modules/mainnet-js/dist/module/util/deriveCashaddr.js.map
++++ b/node_modules/mainnet-js/dist/module/util/deriveCashaddr.js.map
+@@ -1 +1 @@
+-{"version":3,"file":"deriveCashaddr.js","sourceRoot":"","sources":["../../../src/util/deriveCashaddr.ts"],"names":[],"mappings":"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"}
+\ No newline at end of file
++{"version":3,"file":"deriveCashaddr.js","sourceRoot":"","sources":["../../../src/util/deriveCashaddr.ts"],"names":[],"mappings":"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"}
+\ No newline at end of file
+diff --git a/node_modules/mainnet-js/src/util/deriveCashaddr.ts b/node_modules/mainnet-js/src/util/deriveCashaddr.ts
+index 33e2193..2d617eb 100644
+--- a/node_modules/mainnet-js/src/util/deriveCashaddr.ts
++++ b/node_modules/mainnet-js/src/util/deriveCashaddr.ts
+@@ -3,13 +3,9 @@ import {
+   encodeCashAddress,
+   CashAddressType,
+   secp256k1,
+-  decodeCashAddressFormat,
+   decodeCashAddressFormatWithoutPrefix,
+-  CashAddressVersionByte,
+   decodeCashAddress,
+-  cashAddressTypeBitsToType,
+-  decodeCashAddressVersionByte,
+-  assertSuccess,
++  DecodedCashAddress,
+ } from "@bitauth/libauth";
+ 
+ import { hash160 } from "./hash160.js";
+@@ -76,84 +72,68 @@ export function deriveTokenaddr(
+ }
+ 
+ export function toCashaddr(tokenaddr: string): string {
+-  let result:
+-    | string
+-    | { payload: Uint8Array; prefix: string; version: number }
+-    | undefined;
++  let result: string | DecodedCashAddress;
+ 
+   // If the address has a prefix decode it as is
+   if (tokenaddr.includes(":")) {
+-    result = decodeCashAddressFormat(tokenaddr);
++    result = decodeCashAddress(tokenaddr);
+   }
+   // otherwise, derive the network from the tokenaddr without prefix
+   else {
+-    result = decodeCashAddressFormatWithoutPrefix(tokenaddr);
++    const resultWithoutPrefix = decodeCashAddressFormatWithoutPrefix(tokenaddr);
++    if (typeof resultWithoutPrefix === "string") throw new Error(resultWithoutPrefix);
++    result = decodeCashAddress(`${resultWithoutPrefix.prefix}:${tokenaddr}`)
+   }
+ 
+   if (typeof result === "string") throw new Error(result);
+ 
+   return encodeCashAddress({
+     prefix: result.prefix as CashAddressNetworkPrefix,
+-    type: CashAddressType.p2pkh,
++    type: result.type.replace("WithTokens", "") as CashAddressType,
+     payload: result.payload,
+   }).address;
+ }
+ 
+ export function toTokenaddr(cashaddr: string): string {
+-  let result:
+-    | string
+-    | { payload: Uint8Array; prefix: string; version: number }
+-    | undefined;
++  let result: string | DecodedCashAddress;
+ 
+   // If the address has a prefix decode it as is
+   if (cashaddr.includes(":")) {
+-    result = decodeCashAddressFormat(cashaddr);
++    result = decodeCashAddress(cashaddr);
+   }
+   // otherwise, derive the network from the cashaddr without prefix
+   else {
+-    result = decodeCashAddressFormatWithoutPrefix(cashaddr);
++    const resultWithoutPrefix = decodeCashAddressFormatWithoutPrefix(cashaddr);
++    if (typeof resultWithoutPrefix === "string") throw new Error(resultWithoutPrefix);
++    result = decodeCashAddress(`${resultWithoutPrefix.prefix}:${cashaddr}`)
+   }
+ 
+   if (typeof result === "string") throw new Error(result);
+ 
+   return encodeCashAddress({
+     prefix: result.prefix as CashAddressNetworkPrefix,
+-    type: CashAddressType.p2pkhWithTokens,
++    type: result.type.replace("WithTokens", "") + "WithTokens" as CashAddressType,
+     payload: result.payload,
+   }).address;
+ }
+ 
+ export function isTokenaddr(address: string): boolean {
+-  let result:
+-    | string
+-    | { payload: Uint8Array; prefix: string; version: number }
+-    | undefined;
++    let result: string | DecodedCashAddress;
+ 
+   // If the address has a prefix decode it as is
+   if (address.includes(":")) {
+-    result = decodeCashAddressFormat(address);
+-  } else {
+-    // otherwise, derive the network from the address without prefix
+-    result = decodeCashAddressFormatWithoutPrefix(address);
++    result = decodeCashAddress(address);
++  }
++  // otherwise, derive the network from the address without prefix
++  else {
++    const resultWithoutPrefix = decodeCashAddressFormatWithoutPrefix(address);
++    if (typeof resultWithoutPrefix === "string") throw new Error(resultWithoutPrefix);
++    result = decodeCashAddress(`${resultWithoutPrefix.prefix}:${address}`)
+   }
+ 
+   if (typeof result === "string") throw new Error(result);
+ 
+-  const info = decodeCashAddressVersionByte(result.version);
+-  if (typeof info === "string") throw new Error(info);
+-
+-  const type = cashAddressTypeBitsToType[
+-    info.typeBits as keyof typeof cashAddressTypeBitsToType
+-  ] as CashAddressType | undefined;
+-  if (type === undefined) {
+-    throw Error("Wrong cashaddress type");
+-  }
+-
+-  return (
+-    [CashAddressType.p2pkhWithTokens, CashAddressType.p2shWithTokens].indexOf(
+-      type
+-    ) !== -1
+-  );
++  return result.type.endsWith("WithTokens");
+ }
+ 
+ export function checkTokenaddr(cashaddr: string, enforce: boolean) {

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useConnectorContext } from "@/contexts/ConnectorContext";
 import { useWatchAddress, WalletClass } from "@/hooks/useWatchAddress";
-import { addMissingBCMRs, BCHBcmr, BCHCategory, chunkArrayInGroups, fetchFtTokenHolders, fetchNftTokenHolders, getTokenDecimals, getTokenImage, getTokenLabel, getTokenName, isChipnet } from "@/lib/utils";
+import { addMissingBCMRs, BCHBcmr, BCHCategory, chunkArrayInGroups, fetchFtTokenHolders, fetchNftTokenHolders, getCauldronPools, getTokenDecimals, getTokenImage, getTokenLabel, getTokenName, isChipnet } from "@/lib/utils";
 import { ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, useState } from "react";
 import { decodeCashAddress, decodeTransaction, hexToBin, isHex } from "@bitauth/libauth";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { BCMR, OpReturnData, SendRequest, TestNetWallet, TokenSendRequest, Wallet } from "mainnet-js";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BanknoteArrowDown, FileDown, FileUp, Github, LoaderCircle } from "lucide-react";
+import { BanknoteArrowDown, CookingPot, FileDown, FileUp, Github, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -479,6 +479,36 @@ export default function Home() {
     input.click();
   }, [setData]);
 
+  const replaceCauldronPoolsWithOwners = useCallback(async () => {
+    if (!targetCategory || !data.length) {
+      return;
+    }
+
+    // p2pkh only
+    if (data.every((payment) => payment.address.includes(":q"))) {
+      return;
+    }
+
+    const pools = await getCauldronPools(targetCategory);
+
+    if (!pools.length) {
+      return;
+    }
+
+    setData((prev) => {
+      const newData = prev.map((payment) => {
+        for (const pool of pools) {
+          if (payment.address === pool.pool_addr) {
+            payment.address = pool.owner_p2pkh_addr;
+          }
+        }
+
+        return payment;
+      });
+      return newData;
+    });
+  }, [data, setData, targetCategory]);
+
   return (
     <div>
       <div className="flex m-5 flex-col items-end">
@@ -629,6 +659,11 @@ export default function Home() {
             </Button>
             {data.length > 0 && <Button title="Export To CSV" variant="outline" onClick={() => exportToCsv()}>
               <FileUp /> Export To CSV
+            </Button>}
+            {targetCategory && <Button title="Replace Cauldron pools with pool owners" variant="outline" onClick={() => replaceCauldronPoolsWithOwners()} className="ml-auto">
+              <CookingPot />
+              <span className="hidden sm:block md:hidden">Pools -&gt; owners</span>
+              <span className="hidden md:block">Replace Cauldron pools with pool owners</span>
             </Button>}
           </div>
 
